@@ -5,3 +5,8 @@ edition = "2021"
 workspace = ".."
 
 [dependencies]
+stardust_derive = { path = "../stardust_derive", version = "0.1.0", optional = true }
+
+[features]
+default = ["derive"]
+derive = ["dep:stardust_derive"]

@@ -4,3 +4,6 @@ members = [
   "stardust",
   "stardust_derive"
 ]
+exclude = [
+  "examples"
+]
