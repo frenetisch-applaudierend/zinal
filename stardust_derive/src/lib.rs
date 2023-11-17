@@ -12,6 +12,7 @@ use syn::ItemStruct;
 use crate::opts::TemplateOptions;
 
 mod opts;
+mod parser;
 
 #[proc_macro_derive(Template, attributes(template))]
 pub fn derive_template(input: TokenStream) -> TokenStream {
@@ -37,7 +38,18 @@ fn derive_template_inner(input: ItemStruct) -> Result<TokenStream, syn::Error> {
 
     options.validate()?;
 
-    println!("Parsed options: {:?}", options);
+    let Some(content) = options.content else {
+        todo!("Not yet implemented");
+    };
+
+    let Some(content_type) = options.content_type else {
+        todo!("Not yet implemented");
+    };
+
+    let items = parser::parse(&content, &content_type)?;
+    let items = items.iter().map(|item| match item {
+        parser::Item::Literal(s) => quote! { write!(w, #s)?; },
+    });
 
     let name = input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -46,7 +58,9 @@ fn derive_template_inner(input: ItemStruct) -> Result<TokenStream, syn::Error> {
     let expanded = quote! {
         impl #impl_generics ::stardust::Renderable for #name #ty_generics #where_clause {
             fn render_to(&self, w: &mut dyn ::std::fmt::Write) -> ::std::result::Result<(), std::fmt::Error> {
-                todo!()
+                #(#items)*
+
+                Ok(())
             }
         }
 

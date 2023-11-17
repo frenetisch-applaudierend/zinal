@@ -45,7 +45,13 @@ impl TemplateOptions {
                         parsed.set_content_type(content_type.value(), content_type.span())?;
                     }
 
-                    _ => return Err(syn::Error::new_spanned(key, "Unknown template option")),
+                    _ => {
+                        let unknown_option = key.to_string();
+                        return Err(syn::Error::new_spanned(
+                            key,
+                            format!("Unknown template option `{}`", unknown_option),
+                        ));
+                    }
                 };
             } else {
                 return Err(lookahead.error());
@@ -111,10 +117,10 @@ impl TemplateOptions {
     }
 
     pub(crate) fn validate(&self) -> Result<(), syn::Error> {
-        if self.content_type.is_none() {
+        if self.content.is_some() && self.content_type.is_none() {
             return Err(syn::Error::new(
                 Span::call_site(),
-                "Missing content type, add template(type = \"...\") to specify the content type",
+                "Missing content type for inline content, add template(type = \"...\") to specify the content type",
             ));
         }
 
@@ -155,19 +161,49 @@ mod tests {
     }
 
     #[test]
-    fn parse_only_content_shorthand() {
+    fn parse_content_shorthand() {
         let attr: Attribute = parse_quote! {
             #[template("Test", type = "html")]
         };
 
         let result = attr.parse_args_with(TemplateOptions::parse_attr);
 
-        println!("Result: {:?}", result);
         assert!(result.is_ok_and(|o| {
             assert_eq!(o.content, Some("Test".to_string()));
             assert!(o.path.is_none());
             assert_eq!(o.content_type, Some("html".to_string()));
+            true
+        }));
+    }
 
+    #[test]
+    fn parse_content() {
+        let attr: Attribute = parse_quote! {
+            #[template(content = "Test", type = "html")]
+        };
+
+        let result = attr.parse_args_with(TemplateOptions::parse_attr);
+
+        assert!(result.is_ok_and(|o| {
+            assert_eq!(o.content, Some("Test".to_string()));
+            assert!(o.path.is_none());
+            assert_eq!(o.content_type, Some("html".to_string()));
+            true
+        }));
+    }
+
+    #[test]
+    fn parse_path() {
+        let attr: Attribute = parse_quote! {
+            #[template(path = "test/foo.html")]
+        };
+
+        let result = attr.parse_args_with(TemplateOptions::parse_attr);
+
+        assert!(result.is_ok_and(|o| {
+            assert_eq!(o.path, Some("test/foo.html".to_string()));
+            assert!(o.content.is_none());
+            assert!(o.content_type.is_none());
             true
         }));
     }

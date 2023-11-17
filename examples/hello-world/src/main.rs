@@ -3,14 +3,14 @@ use stardust::{Renderable, Template};
 #[derive(Template)]
 #[template(
     type = "html",
-    inline = "<div><Person name='Fred' age={35}><p>Lorem ipsum...</p></Person></div>"
+    content = "<div><Person name='Fred' age={35}><p>Lorem ipsum...</p></Person></div>"
 )]
 struct Info;
 
 #[derive(Template)]
 #[template(
     type = "html",
-    inline = "<p>Name: {self.name}</p><p>Age: {self.age}</p>{self.children}"
+    content = "<p>Name: {self.name}</p><p>Age: {self.age}</p>{self.children}"
 )]
 struct Person<'a> {
     name: &'a str,
