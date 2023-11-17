@@ -7,16 +7,37 @@ extern crate syn;
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use syn::DeriveInput;
+use syn::ItemStruct;
+
+use crate::opts::TemplateOptions;
+
+mod opts;
 
 #[proc_macro_derive(Template, attributes(template))]
 pub fn derive_template(input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
-    let input = parse_macro_input!(input as DeriveInput);
+    let input = parse_macro_input!(input as ItemStruct);
 
-    for attr in input.attrs {
-        println!("Found attr {:?}", attr.path().is_ident("template"));
+    match derive_template_inner(input) {
+        Ok(stream) => stream,
+        Err(err) => err.to_compile_error().into(),
     }
+}
+
+fn derive_template_inner(input: ItemStruct) -> Result<TokenStream, syn::Error> {
+    let mut options = TemplateOptions::default();
+
+    for attr in input
+        .attrs
+        .into_iter()
+        .filter(|a| a.path().is_ident("template"))
+    {
+        options.merge_attr(&attr)?;
+    }
+
+    options.validate()?;
+
+    println!("Parsed options: {:?}", options);
 
     let name = input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -33,5 +54,5 @@ pub fn derive_template(input: TokenStream) -> TokenStream {
     };
 
     // Hand the output tokens back to the compiler
-    TokenStream::from(expanded)
+    Ok(TokenStream::from(expanded))
 }
