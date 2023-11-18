@@ -22,6 +22,6 @@ impl Display for Error {
 
 impl std::error::Error for Error {}
 
-pub fn parse<'src>(source: &'src str, content_type: &str) -> Result<Vec<Item<'src>>, syn::Error> {
-    todo!("Parsing not yet implemented")
+pub fn parse<'src>(source: &'src str, _content_type: &str) -> Result<Vec<Item<'src>>, syn::Error> {
+    Ok(vec![Item::Literal(source)])
 }

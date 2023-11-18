@@ -48,7 +48,7 @@ fn derive_template_inner(input: ItemStruct) -> Result<TokenStream, syn::Error> {
 
     let items = parser::parse(&content, &content_type)?;
     let items = items.iter().map(|item| match item {
-        parser::Item::Literal(s) => quote! { write!(w, #s)?; },
+        parser::Item::Literal(s) => quote! { write!(w, "{}", #s)?; },
     });
 
     let name = input.ident;
