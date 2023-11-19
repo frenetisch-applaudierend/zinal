@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use proc_macro2::Span;
 
+pub mod common;
 pub mod html;
 
 pub trait TemplateParser<'src> {
@@ -11,6 +12,8 @@ pub trait TemplateParser<'src> {
 #[derive(Debug)]
 pub enum Item<'src> {
     Literal(&'src str),
+    Expression(syn::Expr),
+    Statement(proc_macro2::TokenStream),
 }
 
 #[derive(Debug, Clone)]

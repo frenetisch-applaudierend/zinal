@@ -49,12 +49,13 @@ fn derive_template_inner(input: ItemStruct) -> Result<TokenStream, syn::Error> {
     let items = parser::parse(&content, &content_type)?;
     let items = items.iter().map(|item| match item {
         parser::Item::Literal(s) => quote! { write!(w, "{}", #s)?; },
+        parser::Item::Expression(_) => quote! { todo!() },
+        parser::Item::Statement(_) => quote! { todo!() },
     });
 
     let name = input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    // Build the output, possibly using quasi-quotation
     let expanded = quote! {
         impl #impl_generics ::stardust::Renderable for #name #ty_generics #where_clause {
             fn render_to(&self, w: &mut dyn ::std::fmt::Write) -> ::std::result::Result<(), std::fmt::Error> {

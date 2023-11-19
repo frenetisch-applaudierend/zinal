@@ -1,4 +1,7 @@
-use super::{Item, TemplateParser};
+use super::{
+    common::{parse_rust_code, parse_rust_expr},
+    Item, TemplateParser,
+};
 
 pub struct HtmlParser<'src> {
     source: &'src str,
@@ -10,15 +13,34 @@ impl<'src> HtmlParser<'src> {
     }
 
     fn try_parse_escape(&mut self) -> Option<Item<'src>> {
+        if self.peek(2) == "{{" {
+            self.source = &self.source[2..];
+            return Some(Item::Literal("{"));
+        }
+
+        if self.peek(3) == "<%%" {
+            self.source = &self.source[3..];
+            return Some(Item::Literal("<%"));
+        }
+
         None
     }
 
     fn try_parse_expression(&mut self) -> Option<Result<Item<'src>, super::Error>> {
-        None
+        if self.peek(1) != "{" {
+            return None;
+        }
+
+        let expr = parse_rust_expr(self.source, "}", "}}");
+        Some(parse_rust_expr(self.source, "}", "}}").map(Item::Expression))
     }
 
     fn try_parse_statement(&mut self) -> Option<Result<Item<'src>, super::Error>> {
-        None
+        if self.peek(2) != "<%" {
+            return None;
+        }
+
+        Some(parse_rust_code(self.source, "}", "}}").map(Item::Statement))
     }
 
     fn try_parse_child_template(&mut self) -> Option<Result<Item<'src>, super::Error>> {
