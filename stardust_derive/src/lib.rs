@@ -7,7 +7,7 @@ extern crate syn;
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use syn::ItemStruct;
+use syn::{Expr, ItemStruct};
 
 use crate::opts::TemplateOptions;
 
@@ -49,8 +49,10 @@ fn derive_template_inner(input: ItemStruct) -> Result<TokenStream, syn::Error> {
     let items = parser::parse(&content, &content_type)?;
     let items = items.iter().map(|item| match item {
         parser::Item::Literal(s) => quote! { write!(w, "{}", #s)?; },
-        parser::Item::Expression(_) => quote! { todo!() },
-        parser::Item::Statement(_) => quote! { todo!() },
+        parser::Item::Expression(expr) => {
+            quote! { ::stardust::Renderable::render_to(&#expr, w)?; }
+        }
+        parser::Item::Statement(_) => quote! { todo!(); },
     });
 
     let name = input.ident;
@@ -58,7 +60,7 @@ fn derive_template_inner(input: ItemStruct) -> Result<TokenStream, syn::Error> {
 
     let expanded = quote! {
         impl #impl_generics ::stardust::Renderable for #name #ty_generics #where_clause {
-            fn render_to(&self, w: &mut dyn ::std::fmt::Write) -> ::std::result::Result<(), std::fmt::Error> {
+            fn render_to(&self, w: &mut dyn ::std::fmt::Write) -> ::std::result::Result<(), ::std::fmt::Error> {
                 #(#items)*
 
                 Ok(())

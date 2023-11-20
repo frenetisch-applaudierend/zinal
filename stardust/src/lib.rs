@@ -27,3 +27,9 @@ where
         write!(writer, "{}", self)
     }
 }
+
+impl Renderable for &dyn Renderable {
+    fn render_to(&self, writer: &mut dyn Write) -> Result<(), Error> {
+        Renderable::render_to(*self, writer)
+    }
+}

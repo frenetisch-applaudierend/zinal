@@ -41,6 +41,12 @@ impl Display for Error {
 
 impl std::error::Error for Error {}
 
+impl From<syn::Error> for Error {
+    fn from(value: syn::Error) -> Self {
+        Self::new(value.to_string())
+    }
+}
+
 pub fn parse<'src>(source: &'src str, content_type: &str) -> Result<Vec<Item<'src>>, syn::Error> {
     let mut parser = match content_type {
         "html" => html::HtmlParser::new(source),

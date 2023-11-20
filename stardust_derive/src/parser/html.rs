@@ -1,25 +1,22 @@
-use super::{
-    common::{parse_rust_code, parse_rust_expr},
-    Item, TemplateParser,
-};
+use super::{common::Source, Item, TemplateParser};
 
 pub struct HtmlParser<'src> {
-    source: &'src str,
+    source: Source<'src>,
 }
 
 impl<'src> HtmlParser<'src> {
     pub fn new(source: &'src str) -> Self {
-        Self { source }
+        Self {
+            source: Source::new(source),
+        }
     }
 
     fn try_parse_escape(&mut self) -> Option<Item<'src>> {
-        if self.peek(2) == "{{" {
-            self.source = &self.source[2..];
+        if self.source.try_consume("{{") {
             return Some(Item::Literal("{"));
         }
 
-        if self.peek(3) == "<%%" {
-            self.source = &self.source[3..];
+        if self.source.try_consume("<%%") {
             return Some(Item::Literal("<%"));
         }
 
@@ -27,20 +24,23 @@ impl<'src> HtmlParser<'src> {
     }
 
     fn try_parse_expression(&mut self) -> Option<Result<Item<'src>, super::Error>> {
-        if self.peek(1) != "{" {
+        if !self.source.try_consume("{") {
             return None;
         }
 
-        let expr = parse_rust_expr(self.source, "}", "}}");
-        Some(parse_rust_expr(self.source, "}", "}}").map(Item::Expression))
+        Some(self.source.parse_rust_expr("}", "}}").map(Item::Expression))
     }
 
     fn try_parse_statement(&mut self) -> Option<Result<Item<'src>, super::Error>> {
-        if self.peek(2) != "<%" {
+        if !self.source.try_consume("<%") {
             return None;
         }
 
-        Some(parse_rust_code(self.source, "}", "}}").map(Item::Statement))
+        Some(
+            self.source
+                .parse_rust_statement("%>", "%%>")
+                .map(Item::Statement),
+        )
     }
 
     fn try_parse_child_template(&mut self) -> Option<Result<Item<'src>, super::Error>> {
@@ -48,38 +48,7 @@ impl<'src> HtmlParser<'src> {
     }
 
     fn parse_literal(&mut self) -> Item<'src> {
-        // Skip the first match of a control character if it's the first character in the source.
-        // Otherwise we'll get in an infinite loop.
-        let mut skip = self.source.starts_with(['{', '<']);
-        let pattern = move |c| {
-            if skip {
-                skip = false;
-                return false;
-            }
-
-            c == '{' || c == '<'
-        };
-
-        match self.source.find(pattern) {
-            Some(idx) => {
-                let (literal, rest) = self.source.split_at(idx);
-                self.source = rest;
-                Item::Literal(literal)
-            }
-            None => {
-                let result = Item::Literal(self.source);
-                self.source = "";
-                result
-            }
-        }
-    }
-
-    fn peek(&self, len: usize) -> &'src str {
-        if self.source.len() >= len {
-            &self.source[..len]
-        } else {
-            ""
-        }
+        Item::Literal(self.source.consume_until(&['{', '<'], true))
     }
 }
 
