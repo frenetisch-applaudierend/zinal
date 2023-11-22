@@ -6,7 +6,10 @@ extern crate syn;
 
 extern crate proc_macro;
 
+use std::{ffi::OsStr, path::PathBuf};
+
 use proc_macro::TokenStream;
+use proc_macro2::Span;
 use syn::ItemStruct;
 
 use crate::opts::TemplateOptions;
@@ -38,13 +41,7 @@ fn derive_template_inner(input: ItemStruct) -> Result<TokenStream, syn::Error> {
 
     options.validate()?;
 
-    let Some(content) = options.content else {
-        todo!("Not yet implemented");
-    };
-
-    let Some(content_type) = options.content_type else {
-        todo!("Not yet implemented");
-    };
+    let (content, content_type) = read_content(options)?;
 
     let items = parser::parse(&content, &content_type)?;
     let items = items.iter().map(|item| match item {
@@ -57,7 +54,7 @@ fn derive_template_inner(input: ItemStruct) -> Result<TokenStream, syn::Error> {
         },
 
         parser::Item::Statement(tokens) => quote! {
-            #tokens ;
+            #tokens;
         },
     });
 
@@ -78,4 +75,54 @@ fn derive_template_inner(input: ItemStruct) -> Result<TokenStream, syn::Error> {
 
     // Hand the output tokens back to the compiler
     Ok(TokenStream::from(expanded))
+}
+
+fn read_content(options: TemplateOptions) -> Result<(String, String), syn::Error> {
+    if options.path.is_some() {
+        read_file_content(options)
+    } else {
+        read_inline_content(options)
+    }
+}
+
+fn read_file_content(options: TemplateOptions) -> Result<(String, String), syn::Error> {
+    let file_name = PathBuf::from(options.path.expect("Should have been verified"));
+    let content_type = if let Some(content_type) = options.content_type {
+        content_type
+    } else {
+        content_type_from_ext(file_name.extension())?
+    };
+
+    let mut full_path = PathBuf::from(
+        std::env::var("CARGO_MANIFEST_DIR")
+            .expect("Internal error: environmental variable `CARGO_MANIFEST_DIR` is not set."),
+    );
+    full_path.push("templates");
+    full_path.push(file_name);
+
+    let content =
+        std::fs::read_to_string(full_path).map_err(|e| syn::Error::new(Span::call_site(), e))?;
+
+    Ok((content, content_type))
+}
+
+fn content_type_from_ext(ext: Option<&OsStr>) -> Result<String, syn::Error> {
+    match ext.and_then(OsStr::to_str) {
+        Some("html") | Some("htm") => Ok("html".to_string()),
+        Some("txt") | None => Ok("plain".to_string()),
+        Some(unknown) => Err(syn::Error::new(
+            Span::call_site(),
+            format!(
+                "Unknown content type for extension '{}'. Please add explicit type attribute",
+                unknown
+            ),
+        )),
+    }
+}
+
+fn read_inline_content(options: TemplateOptions) -> Result<(String, String), syn::Error> {
+    Ok((
+        options.content.expect("Should have been verified"),
+        options.content_type.expect("Should have been verified"),
+    ))
 }

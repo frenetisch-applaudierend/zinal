@@ -3,7 +3,7 @@ use stardust::{Renderable, Template};
 #[derive(Template)]
 #[template(
     type = "html",
-    content = "<div><# println!(\"Injected\") #><Person name='Fred' age={35}><p>Lorem ipsum...</p></Person></div>"
+    content = "<div><Person name='Fred' age={35}><p>Lorem ipsum...</p></Person></div>"
 )]
 struct Info;
 
