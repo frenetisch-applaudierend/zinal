@@ -39,7 +39,25 @@ impl<'src> Source<'src> {
         end: &str,
         escape: &str,
     ) -> Result<proc_macro2::TokenStream, Error> {
-        todo!("Statements not yet done")
+        let mut stmt = String::new();
+
+        while !self.is_empty() {
+            // Handle escapes
+            if self.try_consume(escape) {
+                stmt.push_str(end);
+                continue;
+            }
+
+            // Handle end of expression
+            if self.try_consume(end) {
+                println!("Statement str: {}", stmt);
+                return syn::parse_str(&stmt).map_err(Error::from);
+            }
+
+            stmt.push_str(self.consume(1)?);
+        }
+
+        Err(Error::premature_eof())
     }
 
     pub fn peek(&self, len: usize) -> &'src str {

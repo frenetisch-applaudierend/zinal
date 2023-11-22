@@ -1,0 +1,12 @@
+<p>{self.name}</p>
+
+<#if self.age >= 18 #>
+  <p>Adult</p>
+<#else if self.age < 18 #>
+  <p>Minor</p>
+<#end>
+
+<p>Children:</p>
+<#for child in self.children #>
+  <Child item={child} />
+<#end>

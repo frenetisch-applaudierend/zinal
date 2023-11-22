@@ -32,13 +32,13 @@ impl<'src> HtmlParser<'src> {
     }
 
     fn try_parse_statement(&mut self) -> Option<Result<Item<'src>, super::Error>> {
-        if !self.source.try_consume("<%") {
+        if !self.source.try_consume("<#") {
             return None;
         }
 
         Some(
             self.source
-                .parse_rust_statement("%>", "%%>")
+                .parse_rust_statement("#>", "##>")
                 .map(Item::Statement),
         )
     }
