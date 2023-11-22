@@ -32,14 +32,16 @@ impl<'src> HtmlParser<'src> {
     }
 
     fn try_parse_statement(&mut self) -> Option<Result<Item<'src>, super::Error>> {
-        if !self.source.try_consume("<#") {
+        #todo next: Add handling here for various kinds of statements
+
+        if !self.source.try_consume("<# ") {
             return None;
         }
 
         Some(
             self.source
                 .parse_rust_statement("#>", "##>")
-                .map(Item::Statement),
+                .map(Item::PlainStatement),
         )
     }
 

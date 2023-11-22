@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
+use quote::ToTokens;
 
 pub mod common;
 pub mod html;
@@ -13,7 +14,50 @@ pub trait TemplateParser<'src> {
 pub enum Item<'src> {
     Literal(&'src str),
     Expression(syn::Expr),
-    Statement(proc_macro2::TokenStream),
+    BlockStatement(BlockKeyword, TokenStream, Vec<Item<'src>>),
+    KeywordStatement(InlineKeyword, Option<TokenStream>),
+    EndblockStatement,
+    PlainStatement(TokenStream),
+}
+
+#[derive(Debug)]
+pub enum BlockKeyword {
+    If,
+    Else,
+    For,
+    While,
+    Loop,
+}
+
+impl ToTokens for BlockKeyword {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let keyword = match self {
+            BlockKeyword::If => quote!(if),
+            BlockKeyword::Else => quote!(else),
+            BlockKeyword::For => quote!(for),
+            BlockKeyword::While => quote!(while),
+            BlockKeyword::Loop => quote!(loop),
+        };
+        keyword.to_tokens(tokens);
+    }
+}
+
+#[derive(Debug)]
+pub enum InlineKeyword {
+    Break,
+    Continue,
+    Let,
+}
+
+impl ToTokens for InlineKeyword {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let keyword = match self {
+            InlineKeyword::Break => quote!(break),
+            InlineKeyword::Continue => quote!(continue),
+            InlineKeyword::Let => quote!(let),
+        };
+        keyword.to_tokens(tokens);
+    }
 }
 
 #[derive(Debug, Clone)]

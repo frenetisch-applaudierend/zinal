@@ -44,19 +44,7 @@ fn derive_template_inner(input: ItemStruct) -> Result<TokenStream, syn::Error> {
     let (content, content_type) = read_content(options)?;
 
     let items = parser::parse(&content, &content_type)?;
-    let items = items.iter().map(|item| match item {
-        parser::Item::Literal(s) => quote! {
-            write!(w, "{}", #s)?;
-        },
-
-        parser::Item::Expression(expr) => quote! {
-            ::stardust::Renderable::render_to(&#expr, w)?;
-        },
-
-        parser::Item::Statement(tokens) => quote! {
-            #tokens;
-        },
-    });
+    let items = items.into_iter().map(emit_tokens);
 
     let name = input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -125,4 +113,37 @@ fn read_inline_content(options: TemplateOptions) -> Result<(String, String), syn
         options.content.expect("Should have been verified"),
         options.content_type.expect("Should have been verified"),
     ))
+}
+
+fn emit_tokens(item: parser::Item<'_>) -> proc_macro2::TokenStream {
+    match item {
+        parser::Item::Literal(s) => quote! {
+            write!(w, "{}", #s)?;
+        },
+
+        parser::Item::Expression(expr) => quote! {
+            ::stardust::Renderable::render_to(&#expr, w)?;
+        },
+
+        parser::Item::BlockStatement(keyword, expr, inner) => {
+            let inner = inner.into_iter().map(emit_tokens);
+            quote! {
+                #keyword #expr {
+                    #(#inner;)*
+                }
+            }
+        }
+
+        parser::Item::KeywordStatement(keyword, tokens) => quote! {
+            #keyword #tokens;
+        },
+
+        parser::Item::PlainStatement(tokens) => quote! {
+            #tokens;
+        },
+
+        parser::Item::EndblockStatement => {
+            todo!("Add correct error handling here; this is an unbalanced end")
+        }
+    }
 }
