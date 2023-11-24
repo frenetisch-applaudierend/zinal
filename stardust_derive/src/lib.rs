@@ -19,7 +19,7 @@ pub fn derive_template(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ItemStruct);
 
     match derive::derive_template(input) {
-        Ok(stream) => stream,
+        Ok(stream) => stream.into(),
         Err(err) => err.to_compile_error().into(),
     }
 }
