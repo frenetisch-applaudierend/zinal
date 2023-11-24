@@ -1,87 +1,9 @@
-use super::{common::Source, Item, TemplateParser};
+use super::{Item, TemplateParser};
 
-pub struct HtmlParser<'src> {
-    source: Source<'src>,
-}
+pub struct HtmlParser;
 
-impl<'src> HtmlParser<'src> {
-    pub fn new(source: &'src str) -> Self {
-        Self {
-            source: Source::new(source),
-        }
-    }
-
-    fn try_parse_escape(&mut self) -> Option<Item<'src>> {
-        if self.source.try_consume("{{") {
-            return Some(Item::Literal("{"));
-        }
-
-        if self.source.try_consume("<##") {
-            return Some(Item::Literal("<#"));
-        }
-
-        None
-    }
-
-    fn try_parse_expression(&mut self) -> Option<Result<Item<'src>, super::Error>> {
-        if !self.source.try_consume("{") {
-            return None;
-        }
-
-        Some(self.source.parse_rust_expr("}", "}}").map(Item::Expression))
-    }
-
-    fn try_parse_block_statement(&mut self) -> Option<Result<Item<'src>, super::Error>> {
+impl TemplateParser for HtmlParser {
+    fn parse<'src>(&mut self, source: &'src str) -> Result<Vec<Item<'src>>, super::Error> {
         todo!()
-    }
-
-    fn try_parse_plain_statement(&mut self) -> Option<Result<Item<'src>, super::Error>> {
-        if !self.source.try_consume("<# ") {
-            return None;
-        }
-
-        Some(
-            self.source
-                .parse_rust_tokens("#>", "##>")
-                .map(Item::PlainStatement),
-        )
-    }
-
-    fn try_parse_child_template(&mut self) -> Option<Result<Item<'src>, super::Error>> {
-        None
-    }
-
-    fn parse_literal(&mut self) -> Item<'src> {
-        Item::Literal(self.source.consume_until(&['{', '<'], true))
-    }
-}
-
-impl<'src> TemplateParser<'src> for HtmlParser<'src> {
-    fn parse_next(&mut self) -> Result<Option<Item<'src>>, super::Error> {
-        if self.source.is_empty() {
-            return Ok(None);
-        }
-
-        if let Some(res) = self.try_parse_escape() {
-            return Ok(Some(res));
-        };
-
-        if let Some(res) = self.try_parse_expression() {
-            return res.map(Some);
-        };
-
-        if let Some(res) = self.try_parse_block_statement() {
-            return res.map(Some);
-        };
-
-        if let Some(res) = self.try_parse_plain_statement() {
-            return res.map(Some);
-        };
-
-        if let Some(res) = self.try_parse_child_template() {
-            return res.map(Some);
-        };
-
-        Ok(Some(self.parse_literal()))
     }
 }
