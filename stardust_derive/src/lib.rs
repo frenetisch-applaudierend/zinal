@@ -141,9 +141,5 @@ fn emit_tokens(item: parser::Item<'_>) -> proc_macro2::TokenStream {
         parser::Item::PlainStatement(tokens) => quote! {
             #tokens;
         },
-
-        parser::Item::EndblockStatement => {
-            todo!("Add correct error handling here; this is an unbalanced end")
-        }
     }
 }

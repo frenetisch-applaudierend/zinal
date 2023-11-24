@@ -16,7 +16,6 @@ pub enum Item<'src> {
     Expression(syn::Expr),
     BlockStatement(BlockKeyword, TokenStream, Vec<Item<'src>>),
     KeywordStatement(InlineKeyword, Option<TokenStream>),
-    EndblockStatement,
     PlainStatement(TokenStream),
 }
 

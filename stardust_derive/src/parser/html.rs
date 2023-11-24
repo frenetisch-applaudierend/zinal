@@ -16,8 +16,8 @@ impl<'src> HtmlParser<'src> {
             return Some(Item::Literal("{"));
         }
 
-        if self.source.try_consume("<%%") {
-            return Some(Item::Literal("<%"));
+        if self.source.try_consume("<##") {
+            return Some(Item::Literal("<#"));
         }
 
         None
@@ -31,16 +31,18 @@ impl<'src> HtmlParser<'src> {
         Some(self.source.parse_rust_expr("}", "}}").map(Item::Expression))
     }
 
-    fn try_parse_statement(&mut self) -> Option<Result<Item<'src>, super::Error>> {
-        #todo next: Add handling here for various kinds of statements
+    fn try_parse_block_statement(&mut self) -> Option<Result<Item<'src>, super::Error>> {
+        todo!()
+    }
 
+    fn try_parse_plain_statement(&mut self) -> Option<Result<Item<'src>, super::Error>> {
         if !self.source.try_consume("<# ") {
             return None;
         }
 
         Some(
             self.source
-                .parse_rust_statement("#>", "##>")
+                .parse_rust_tokens("#>", "##>")
                 .map(Item::PlainStatement),
         )
     }
@@ -68,7 +70,11 @@ impl<'src> TemplateParser<'src> for HtmlParser<'src> {
             return res.map(Some);
         };
 
-        if let Some(res) = self.try_parse_statement() {
+        if let Some(res) = self.try_parse_block_statement() {
+            return res.map(Some);
+        };
+
+        if let Some(res) = self.try_parse_plain_statement() {
             return res.map(Some);
         };
 

@@ -34,7 +34,7 @@ impl<'src> Source<'src> {
         Err(Error::premature_eof())
     }
 
-    pub fn parse_rust_statement(
+    pub fn parse_rust_tokens(
         &mut self,
         end: &str,
         escape: &str,
