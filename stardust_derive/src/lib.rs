@@ -10,6 +10,7 @@ use proc_macro::TokenStream;
 use syn::ItemStruct;
 
 mod derive;
+mod emit;
 mod opts;
 mod parser;
 

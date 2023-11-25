@@ -3,23 +3,22 @@ use std::fmt::Display;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
 
-pub mod common;
 pub mod html;
 
 pub fn parse<'src>(source: &'src str, content_type: &str) -> Result<Vec<Item<'src>>, syn::Error> {
     let mut parser = match content_type {
-        "html" => html::HtmlParser::new(),
-        _ => return Err(syn::Error::new_spanned("unsupported content type", source)),
+        "html" => html::HtmlParser,
+        _ => {
+            return Err(syn::Error::new(
+                Span::call_site(),
+                "unsupported content type",
+            ))
+        }
     };
 
-    let mut items = Vec::new();
-    while let Some(item) = parser
+    parser
         .parse(source)
-        .map_err(|err| syn::Error::new(Span::call_site(), err.message))?
-    {
-        items.push(item);
-    }
-    Ok(items)
+        .map_err(|err| syn::Error::new(Span::call_site(), err.message))
 }
 
 pub trait TemplateParser {
@@ -32,7 +31,7 @@ pub enum Item<'src> {
     Expression(&'src str),
     BlockStatement {
         keyword: BlockKeyword,
-        expr: &'src str,
+        expr: Option<&'src str>,
         body: Vec<Item<'src>>,
     },
     KeywordStatement {

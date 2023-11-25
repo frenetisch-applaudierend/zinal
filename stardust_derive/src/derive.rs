@@ -1,12 +1,11 @@
 use std::{ffi::OsStr, path::PathBuf};
 
 use proc_macro2::{Span, TokenStream};
-use quote::ToTokens;
 use syn::{Error, ItemStruct};
 
 use crate::{
     opts::TemplateOptions,
-    parser::{self, BlockKeyword, InlineKeyword, Item},
+    parser::{self, Item},
 };
 
 pub(crate) fn derive_template(input: ItemStruct) -> Result<TokenStream, Error> {
@@ -94,79 +93,4 @@ fn read_inline_content(options: TemplateOptions) -> Result<(String, String), Err
         options.content.expect("Should have been verified"),
         options.content_type.expect("Should have been verified"),
     ))
-}
-
-impl Item<'_> {
-    fn emit_all(items: impl IntoIterator<Item = Self>) -> Result<Vec<TokenStream>, Error> {
-        items.into_iter().map(Item::emit).collect::<Result<_, _>>()
-    }
-
-    fn emit(self) -> Result<TokenStream, Error> {
-        match self {
-            parser::Item::Literal(s) => Ok(quote! {
-                write!(w, "{}", #s)?;
-            }),
-
-            parser::Item::Expression(expr) => {
-                let expr = syn::parse_str::<syn::Expr>(expr)?;
-                Ok(quote! {
-                    ::stardust::Renderable::render_to(&#expr, w)?;
-                })
-            }
-
-            parser::Item::BlockStatement {
-                keyword,
-                expr,
-                body,
-            } => {
-                let expr = syn::parse_str::<syn::Expr>(expr)?;
-                let body = Item::emit_all(body)?;
-
-                Ok(quote! {
-                    #keyword #expr {
-                        #(#body;)*
-                    }
-                })
-            }
-
-            parser::Item::KeywordStatement { keyword, statement } => {
-                let statement = match statement {
-                    Some(s) => Some(syn::parse_str::<TokenStream>(s)?),
-                    None => None,
-                };
-
-                Ok(quote! {
-                    #keyword #statement;
-                })
-            }
-
-            parser::Item::PlainStatement(tokens) => Ok(quote! {
-                #tokens;
-            }),
-        }
-    }
-}
-
-impl ToTokens for BlockKeyword {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let keyword = match self {
-            BlockKeyword::If => quote!(if),
-            BlockKeyword::Else => quote!(else),
-            BlockKeyword::For => quote!(for),
-            BlockKeyword::While => quote!(while),
-            BlockKeyword::Loop => quote!(loop),
-        };
-        keyword.to_tokens(tokens);
-    }
-}
-
-impl ToTokens for InlineKeyword {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let keyword = match self {
-            InlineKeyword::Break => quote!(break),
-            InlineKeyword::Continue => quote!(continue),
-            InlineKeyword::Let => quote!(let),
-        };
-        keyword.to_tokens(tokens);
-    }
 }
