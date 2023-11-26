@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{borrow::Cow, fmt::Display};
 
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
@@ -25,10 +25,10 @@ pub trait TemplateParser {
     fn parse<'src>(&mut self, source: &'src str) -> Result<Vec<Item<'src>>, Error>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Item<'src> {
     Literal(&'src str),
-    Expression(&'src str),
+    Expression(Cow<'src, str>),
     BlockStatement {
         keyword: BlockKeyword,
         expr: Option<&'src str>,
@@ -41,7 +41,7 @@ pub enum Item<'src> {
     PlainStatement(&'src str),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BlockKeyword {
     If,
     Else,
@@ -50,7 +50,7 @@ pub enum BlockKeyword {
     Loop,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InlineKeyword {
     Break,
     Continue,

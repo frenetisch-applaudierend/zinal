@@ -18,7 +18,7 @@ impl Item<'_> {
             }),
 
             Item::Expression(expr) => {
-                let expr = syn::parse_str::<syn::Expr>(expr)?;
+                let expr = syn::parse_str::<syn::Expr>(expr.as_ref())?;
                 Ok(quote! {
                     ::stardust::Renderable::render_to(&#expr, w)?;
                 })
@@ -86,6 +86,8 @@ impl ToTokens for InlineKeyword {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use proc_macro2::TokenStream;
     use syn::Error;
 
@@ -104,7 +106,7 @@ mod tests {
 
     #[test]
     fn expression() {
-        let items = vec![Item::Expression("self.name.to_upper()")];
+        let items = vec![Item::Expression(Cow::from("self.name.to_upper()"))];
 
         let tokens = Item::emit_all(items);
 
@@ -117,7 +119,7 @@ mod tests {
     fn combination() {
         let items = vec![
             Item::Literal("Hello, "),
-            Item::Expression("self.name.to_upper()"),
+            Item::Expression(Cow::from("self.name.to_upper()")),
             Item::Literal("!"),
         ];
 
