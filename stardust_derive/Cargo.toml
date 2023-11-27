@@ -8,7 +8,6 @@ workspace = ".."
 proc-macro2 = { version = "1.0" }
 syn = { version = "2.0", features = ["full", "extra-traits"] }
 quote = "1.0"
-nom = "7.1"
 
 [lib]
 proc-macro = true

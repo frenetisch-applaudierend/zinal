@@ -30,7 +30,7 @@ impl Item<'_> {
                 body,
             } => {
                 let expr = match expr {
-                    Some(expr) => Some(syn::parse_str::<syn::Expr>(expr)?),
+                    Some(expr) => Some(syn::parse_str::<syn::Expr>(expr.as_ref())?),
                     None => None,
                 };
                 let body = Item::emit_all(body)?;
@@ -44,7 +44,7 @@ impl Item<'_> {
 
             Item::KeywordStatement { keyword, statement } => {
                 let statement = match statement {
-                    Some(s) => Some(syn::parse_str::<TokenStream>(s)?),
+                    Some(s) => Some(syn::parse_str::<TokenStream>(s.as_ref())?),
                     None => None,
                 };
 
@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn literal() {
-        let items = vec![Item::Literal("Hello, World!")];
+        let items = vec![Item::Literal(Cow::from("Hello, World!"))];
 
         let tokens = Item::emit_all(items);
 
@@ -118,9 +118,9 @@ mod tests {
     #[test]
     fn combination() {
         let items = vec![
-            Item::Literal("Hello, "),
+            Item::Literal(Cow::from("Hello, ")),
             Item::Expression(Cow::from("self.name.to_upper()")),
-            Item::Literal("!"),
+            Item::Literal(Cow::from("!")),
         ];
 
         let tokens = Item::emit_all(items);
@@ -138,8 +138,8 @@ mod tests {
     fn block_statement_if() {
         let items = vec![Item::BlockStatement {
             keyword: BlockKeyword::If,
-            expr: Some("self.age > 18"),
-            body: vec![Item::Literal("Hello, World!")],
+            expr: Some(Cow::from("self.age > 18")),
+            body: vec![Item::Literal(Cow::from("Hello, World!"))],
         }];
 
         let tokens = Item::emit_all(items);
@@ -158,7 +158,7 @@ mod tests {
         let items = vec![Item::BlockStatement {
             keyword: BlockKeyword::Loop,
             expr: None,
-            body: vec![Item::Literal("Hello, World!")],
+            body: vec![Item::Literal(Cow::from("Hello, World!"))],
         }];
 
         let tokens = Item::emit_all(items);
