@@ -43,8 +43,12 @@ fn parse_escape<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
     .parse(input)
 }
 
-fn parse_expr<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    todo!()
+fn parse_expr<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
+    if input.try_consume("{").is_none() {
+        return Ok(None);
+    }
+
+    take_until("}", "}}").map(Item::Expression).parse(input)
 }
 
 fn parse_statement<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
