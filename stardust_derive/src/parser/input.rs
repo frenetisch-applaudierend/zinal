@@ -46,7 +46,27 @@ impl<'src> Input<'src> {
         Some(&self.source[peek_start..peek_end])
     }
 
-    pub fn try_consume(&mut self, value: &str) -> Option<&'src str> {
+    pub fn peek_bytes(&self, loc: impl RangeBounds<usize>) -> Option<&'src str> {
+        let start = match loc.start_bound() {
+            Bound::Included(v) => *v,
+            Bound::Excluded(v) => *v + 1,
+            Bound::Unbounded => 0,
+        };
+
+        let end = match loc.end_bound() {
+            Bound::Included(v) => *v + 1,
+            Bound::Excluded(v) => *v,
+            Bound::Unbounded => 0,
+        };
+
+        if start >= self.source.len() || end >= self.source.len() {
+            return None;
+        }
+
+        Some(&self.source[start..end])
+    }
+
+    pub fn consume_lit(&mut self, value: &str) -> Option<&'src str> {
         if self.source.starts_with(value) {
             let (consumed, remainder) = self.source.split_at(value.len());
             self.source = remainder;
@@ -54,6 +74,14 @@ impl<'src> Input<'src> {
         } else {
             None
         }
+    }
+
+    pub fn consume_until(&mut self, value: &str) -> Option<&'src str> {
+        let index = self.source.find(value)?;
+
+        let (consumed, remainder) = self.source.split_at(index);
+        self.source = remainder;
+        Some(consumed)
     }
 }
 
@@ -75,12 +103,12 @@ mod tests {
     #[test]
     fn try_consume() {
         let mut input = Input::new("Hellö, World!");
-        assert_eq!(input.try_consume("Hellö"), Some("Hellö"));
+        assert_eq!(input.consume_lit("Hellö"), Some("Hellö"));
 
         let mut input = Input::new("Hellö, World!");
-        assert_eq!(input.try_consume("Hellö, World!"), Some("Hellö, World!"));
+        assert_eq!(input.consume_lit("Hellö, World!"), Some("Hellö, World!"));
 
         let mut input = Input::new("Hellö, World!");
-        assert_eq!(input.try_consume("Hello"), None);
+        assert_eq!(input.consume_lit("Hello"), None);
     }
 }

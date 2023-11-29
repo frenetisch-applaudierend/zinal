@@ -4,7 +4,7 @@ use proc_macro2::Span;
 
 use self::{error::Error, input::Input};
 
-mod common;
+mod combinators;
 mod error;
 mod html;
 mod input;

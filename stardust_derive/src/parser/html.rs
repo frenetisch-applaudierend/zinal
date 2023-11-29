@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 
-use crate::parser::common::literal;
+use crate::parser::combinators::literal;
 
 use super::{
-    common::{Combinator, ParseResult},
+    combinators::{take_until, Combinator, ParseResult},
     input::Input,
     Error, Item, TemplateParser,
 };
@@ -44,7 +44,7 @@ fn parse_escape<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
 }
 
 fn parse_expr<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    if input.try_consume("{").is_none() {
+    if input.consume_lit("{").is_none() {
         return Ok(None);
     }
 
@@ -52,15 +52,15 @@ fn parse_expr<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
 }
 
 fn parse_statement<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    todo!()
+    Ok(None)
 }
 
 fn parse_component<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    todo!()
+    Ok(None)
 }
 
 fn parse_literal<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    todo!()
+    todo!("Implement a Spanned(&str) type and provide a method to combine them; check if this can also be used to simplify take_until")
 }
 
 #[cfg(test)]

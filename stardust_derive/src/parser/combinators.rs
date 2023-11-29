@@ -1,6 +1,6 @@
 #![macro_use]
 
-use std::marker::PhantomData;
+use std::{borrow::Cow, marker::PhantomData};
 
 use super::{error::Error, input::Input};
 
@@ -58,7 +58,50 @@ where
 }
 
 pub fn literal<'src>(value: &'static str) -> impl Combinator<'src, &'src str> {
-    move |input: &mut Input<'src>| Ok(input.try_consume(value))
+    move |input: &mut Input<'src>| Ok(input.consume_lit(value))
+}
+
+pub fn take_until<'a>(terminator: &'a str, escape: &'a str) -> TakeUntil<'a> {
+    debug_assert!(
+        escape.ends_with(terminator),
+        "Currently this combinator requires that the escape ends with the terminator"
+    );
+
+    let escape = &escape[..(escape.len() - terminator.len())];
+
+    TakeUntil { terminator, escape }
+}
+
+pub struct TakeUntil<'a> {
+    terminator: &'a str,
+    escape: &'a str,
+}
+
+impl<'a, 'src> Combinator<'src, Cow<'src, str>> for TakeUntil<'a> {
+    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Cow<'src, str>> {
+        let mut result = Cow::Borrowed("");
+
+        while !input.is_at_end() {
+            let consumed = input
+                .consume_until(self.terminator)
+                .ok_or(Error::unexpected_eof())?;
+            input
+                .consume_lit(self.terminator)
+                .expect("Terminator implied by consume_until");
+
+            if consumed.ends_with(self.escape) {
+                result.to_mut().push_str(consumed);
+                result.to_mut().push_str(self.terminator);
+            } else if result.is_empty() {
+                return Ok(Some(Cow::from(consumed)));
+            } else {
+                result.to_mut().push_str(consumed);
+                return Ok(Some(result));
+            }
+        }
+
+        Err(Error::unexpected_eof())
+    }
 }
 
 macro_rules! select {

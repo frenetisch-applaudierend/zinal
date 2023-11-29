@@ -9,6 +9,10 @@ impl Error {
             message: message.into(),
         }
     }
+
+    pub fn unexpected_eof() -> Self {
+        Self::new("Unexpected end of input")
+    }
 }
 
 impl std::fmt::Display for Error {
