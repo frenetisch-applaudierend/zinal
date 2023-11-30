@@ -6,11 +6,14 @@ pub struct Input<'src> {
     offset: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Offset<'src> {
     text: &'src str,
     offset: usize,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Position(usize);
 
 impl<'src> Input<'src> {
     pub fn new(source: &'src str) -> Self {
@@ -23,6 +26,15 @@ impl<'src> Input<'src> {
 
     pub fn is_at_end(&self) -> bool {
         self.remainder.is_empty()
+    }
+
+    pub fn position(&self) -> Position {
+        Position(self.offset)
+    }
+
+    pub fn reset_to(&mut self, position: Position) {
+        self.offset = position.0;
+        self.remainder = &self.source[self.offset..];
     }
 
     pub fn consume_lit(&mut self, value: &str) -> Option<Offset<'src>> {

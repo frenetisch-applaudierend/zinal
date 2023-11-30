@@ -9,22 +9,48 @@ use super::{
 
 pub type ParseResult<T> = Result<Option<T>, Error>;
 
-pub trait Combinator<'src, T>: Sized {
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<T>;
+pub trait Combinator<'src>: Sized {
+    type Output;
 
-    fn map<F, U>(self, transform: F) -> Map<Self, F, T>
+    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output>;
+
+    fn map<F, U>(self, transform: F) -> Map<Self, F, Self::Output>
     where
-        F: Fn(T) -> U,
+        F: Fn(Self::Output) -> U,
     {
-        map(self, transform)
+        Map {
+            combinator: self,
+            transform,
+            _phantom: PhantomData,
+        }
+    }
+
+    fn then<C>(self, next: C) -> Then<Self, C>
+    where
+        C: Combinator<'src>,
+    {
+        Then {
+            combinator1: self,
+            combinator2: next,
+        }
+    }
+
+    fn ignore_then<C>(self, next: C) -> R
+    where
+        C: Combinator<'src>,
+        R: Combinator<'src, Output = Self::Output>,
+    {
+        self.then(next).map(|(_, r2)| r2)
     }
 }
 
-impl<'src, T, F> Combinator<'src, T> for F
+impl<'src, T, F> Combinator<'src> for F
 where
     F: Fn(&mut Input<'src>) -> ParseResult<T>,
 {
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<T> {
+    type Output = T;
+
+    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         self(input)
     }
 }
@@ -35,12 +61,14 @@ pub struct Map<C, F, T> {
     _phantom: PhantomData<T>,
 }
 
-impl<'src, C, F, T, U> Combinator<'src, U> for Map<C, F, T>
+impl<'src, C, F, T, U> Combinator<'src> for Map<C, F, T>
 where
-    C: Combinator<'src, T>,
+    C: Combinator<'src, Output = T>,
     F: Fn(T) -> U,
 {
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<U> {
+    type Output = U;
+
+    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         match self.combinator.parse(input)? {
             Some(r) => Ok(Some((self.transform)(r))),
             None => Ok(None),
@@ -48,19 +76,36 @@ where
     }
 }
 
-pub fn map<'src, C, F, T, U>(combinator: C, transform: F) -> Map<C, F, T>
+pub struct Then<C1, C2> {
+    combinator1: C1,
+    combinator2: C2,
+}
+
+impl<'src, C1, C2> Combinator<'src> for Then<C1, C2>
 where
-    C: Combinator<'src, T>,
-    F: Fn(T) -> U,
+    C1: Combinator<'src>,
+    C2: Combinator<'src>,
 {
-    Map {
-        combinator,
-        transform,
-        _phantom: PhantomData,
+    type Output = (C1::Output, C2::Output);
+
+    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+        let position = input.position();
+
+        let Some(result1) = self.combinator1.parse(input)? else {
+            input.reset_to(position);
+            return Ok(None);
+        };
+
+        let Some(result2) = self.combinator2.parse(input)? else {
+            input.reset_to(position);
+            return Ok(None);
+        };
+
+        Ok(Some((result1, result2)))
     }
 }
 
-pub fn literal<'src>(value: &'static str) -> impl Combinator<'src, Offset<'src>> {
+pub fn literal<'src>(value: &'static str) -> impl Combinator<'src, Output = Offset<'src>> {
     move |input: &mut Input<'src>| Ok(input.consume_lit(value))
 }
 
@@ -80,7 +125,9 @@ pub struct TakeUntil<'a> {
     escape: &'a str,
 }
 
-impl<'a, 'src> Combinator<'src, Cow<'src, str>> for TakeUntil<'a> {
+impl<'a, 'src> Combinator<'src> for TakeUntil<'a> {
+    type Output = Cow<'src, str>;
+
     fn parse(&self, input: &mut Input<'src>) -> ParseResult<Cow<'src, str>> {
         let mut result = Cow::Borrowed("");
 
@@ -88,11 +135,12 @@ impl<'a, 'src> Combinator<'src, Cow<'src, str>> for TakeUntil<'a> {
             let consumed = input
                 .consume_until(self.terminator)
                 .ok_or(Error::unexpected_eof())?;
-            input
-                .consume_lit(self.terminator)
-                .expect("Terminator implied by consume_until");
 
             if consumed.ends_with(self.escape) {
+                input
+                    .consume_lit(self.terminator)
+                    .expect("Terminator implied by consume_until");
+
                 result.to_mut().push_str(consumed.as_ref());
                 result.to_mut().push_str(self.terminator);
             } else if result.is_empty() {
