@@ -59,8 +59,21 @@ fn parse_component<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
     Ok(None)
 }
 
-fn parse_literal<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    todo!("Implement a Spanned(&str) type and provide a method to combine them; check if this can also be used to simplify take_until")
+fn parse_literal<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
+    // consume possible leading < or {
+    let Some(lead) = input.consume_count(1) else {
+        return Err(Error::unexpected_eof());
+    };
+
+    let mut parts = vec![lead];
+
+    while !input.is_at_end() {
+        parts.push(input.consume_until_any("<{").unwrap_or(input.consume_all()));
+    }
+
+    let combined = input.combine(&parts);
+
+    Ok(Some(Item::Literal(combined.into_cow())))
 }
 
 #[cfg(test)]

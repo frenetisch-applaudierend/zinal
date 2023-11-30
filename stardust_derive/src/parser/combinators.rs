@@ -2,7 +2,10 @@
 
 use std::{borrow::Cow, marker::PhantomData};
 
-use super::{error::Error, input::Input};
+use super::{
+    error::Error,
+    input::{Input, Offset},
+};
 
 pub type ParseResult<T> = Result<Option<T>, Error>;
 
@@ -57,7 +60,7 @@ where
     }
 }
 
-pub fn literal<'src>(value: &'static str) -> impl Combinator<'src, &'src str> {
+pub fn literal<'src>(value: &'static str) -> impl Combinator<'src, Offset<'src>> {
     move |input: &mut Input<'src>| Ok(input.consume_lit(value))
 }
 
@@ -90,12 +93,12 @@ impl<'a, 'src> Combinator<'src, Cow<'src, str>> for TakeUntil<'a> {
                 .expect("Terminator implied by consume_until");
 
             if consumed.ends_with(self.escape) {
-                result.to_mut().push_str(consumed);
+                result.to_mut().push_str(consumed.as_ref());
                 result.to_mut().push_str(self.terminator);
             } else if result.is_empty() {
-                return Ok(Some(Cow::from(consumed)));
+                return Ok(Some(consumed.into_cow()));
             } else {
-                result.to_mut().push_str(consumed);
+                result.to_mut().push_str(consumed.as_ref());
                 return Ok(Some(result));
             }
         }
