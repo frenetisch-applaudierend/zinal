@@ -1,46 +1,53 @@
 #![macro_use]
 
-use std::{borrow::Cow, marker::PhantomData};
+use std::borrow::Cow;
+
+use self::{
+    map::Map,
+    then::{IgnoreThen, Then, ThenIgnore},
+};
 
 use super::{
     error::Error,
     input::{Input, Offset},
 };
 
+mod map;
+mod then;
+
 pub type ParseResult<T> = Result<Option<T>, Error>;
 
 pub trait Combinator<'src>: Sized {
     type Output;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output>;
+    fn parse(self, input: &mut Input<'src>) -> ParseResult<Self::Output>;
 
     fn map<F, U>(self, transform: F) -> Map<Self, F, Self::Output>
     where
         F: Fn(Self::Output) -> U,
     {
-        Map {
-            combinator: self,
-            transform,
-            _phantom: PhantomData,
-        }
+        Map::new(self, transform)
     }
 
     fn then<C>(self, next: C) -> Then<Self, C>
     where
         C: Combinator<'src>,
     {
-        Then {
-            combinator1: self,
-            combinator2: next,
-        }
+        Then::new(self, next)
     }
 
-    fn ignore_then<C>(self, next: C) -> R
+    fn ignore_then<C>(self, next: C) -> IgnoreThen<Self, C>
     where
         C: Combinator<'src>,
-        R: Combinator<'src, Output = Self::Output>,
     {
-        self.then(next).map(|(_, r2)| r2)
+        IgnoreThen::new(self, next)
+    }
+
+    fn then_ignore<C>(self, next: C) -> ThenIgnore<Self, C>
+    where
+        C: Combinator<'src>,
+    {
+        ThenIgnore::new(self, next)
     }
 }
 
@@ -50,58 +57,8 @@ where
 {
     type Output = T;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse(self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         self(input)
-    }
-}
-
-pub struct Map<C, F, T> {
-    transform: F,
-    combinator: C,
-    _phantom: PhantomData<T>,
-}
-
-impl<'src, C, F, T, U> Combinator<'src> for Map<C, F, T>
-where
-    C: Combinator<'src, Output = T>,
-    F: Fn(T) -> U,
-{
-    type Output = U;
-
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
-        match self.combinator.parse(input)? {
-            Some(r) => Ok(Some((self.transform)(r))),
-            None => Ok(None),
-        }
-    }
-}
-
-pub struct Then<C1, C2> {
-    combinator1: C1,
-    combinator2: C2,
-}
-
-impl<'src, C1, C2> Combinator<'src> for Then<C1, C2>
-where
-    C1: Combinator<'src>,
-    C2: Combinator<'src>,
-{
-    type Output = (C1::Output, C2::Output);
-
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
-        let position = input.position();
-
-        let Some(result1) = self.combinator1.parse(input)? else {
-            input.reset_to(position);
-            return Ok(None);
-        };
-
-        let Some(result2) = self.combinator2.parse(input)? else {
-            input.reset_to(position);
-            return Ok(None);
-        };
-
-        Ok(Some((result1, result2)))
     }
 }
 
@@ -128,7 +85,7 @@ pub struct TakeUntil<'a> {
 impl<'a, 'src> Combinator<'src> for TakeUntil<'a> {
     type Output = Cow<'src, str>;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Cow<'src, str>> {
+    fn parse(self, input: &mut Input<'src>) -> ParseResult<Cow<'src, str>> {
         let mut result = Cow::Borrowed("");
 
         while !input.is_at_end() {
@@ -167,7 +124,7 @@ macro_rules! select {
 
 macro_rules! _select_inner {
     ($i:expr => $c:expr) => {
-        if let Some(r) = Combinator::parse(&$c, $i)? {
+        if let Some(r) = Combinator::parse($c, $i)? {
             return Ok(Some(r));
         }
     };

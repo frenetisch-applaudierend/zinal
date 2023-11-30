@@ -44,11 +44,10 @@ fn parse_escape<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
 }
 
 fn parse_expr<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    if input.consume_lit("{").is_none() {
-        return Ok(None);
-    }
-
-    take_until("}", "}}").map(Item::Expression).parse(input)
+    literal("{")
+        .ignore_then(take_until("}", "}}").map(Item::Expression))
+        .then_ignore(literal("}"))
+        .parse(input)
 }
 
 fn parse_statement<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
