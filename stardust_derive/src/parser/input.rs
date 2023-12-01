@@ -45,6 +45,23 @@ impl<'src> Input<'src> {
         }
     }
 
+    pub fn consume_while(
+        &mut self,
+        mut condition: impl FnMut(char) -> bool,
+    ) -> Option<Offset<'src>> {
+        let mut taken = 0;
+        let mut len = 0;
+        for c in self.remainder.chars() {
+            if !condition(c) {
+                break;
+            }
+
+            len += c.len_utf8();
+        }
+
+        Some(self.consume(len))
+    }
+
     pub fn consume_until(&mut self, sentinel: &str) -> Option<Offset<'src>> {
         let index = self.remainder.find(sentinel)?;
 

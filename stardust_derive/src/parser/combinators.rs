@@ -4,6 +4,7 @@ use std::borrow::Cow;
 
 use self::{
     map::Map,
+    optional::Optional,
     then::{IgnoreThen, Then, ThenIgnore},
 };
 
@@ -13,6 +14,7 @@ use super::{
 };
 
 mod map;
+mod optional;
 mod then;
 
 pub type ParseResult<T> = Result<Option<T>, Error>;
@@ -21,6 +23,10 @@ pub trait Combinator<'src>: Sized {
     type Output;
 
     fn parse(self, input: &mut Input<'src>) -> ParseResult<Self::Output>;
+
+    fn optional(self) -> Optional<Self> {
+        Optional::new(self)
+    }
 
     fn map<F, U>(self, transform: F) -> Map<Self, F, Self::Output>
     where
@@ -64,6 +70,10 @@ where
 
 pub fn literal<'src>(value: &'static str) -> impl Combinator<'src, Output = Offset<'src>> {
     move |input: &mut Input<'src>| Ok(input.consume_lit(value))
+}
+
+pub fn whitespace<'src>() -> impl Combinator<'src, Output = Offset<'src>> {
+    move |input: &mut Input<'src>| Ok(input.consume_while(char::is_whitespace))
 }
 
 pub fn take_until<'a>(terminator: &'a str, escape: &'a str) -> TakeUntil<'a> {

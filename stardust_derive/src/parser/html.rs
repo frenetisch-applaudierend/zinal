@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use crate::parser::combinators::literal;
 
 use super::{
-    combinators::{take_until, Combinator, ParseResult},
+    combinators::{take_until, whitespace, Combinator, ParseResult},
     input::Input,
     Error, Item, TemplateParser,
 };
@@ -50,8 +50,12 @@ fn parse_expr<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
         .parse(input)
 }
 
-fn parse_statement<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    Ok(None)
+fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
+    literal("<#")
+        .ignore_then(whitespace().optional())
+        .ignore_then(take_until("#>", "##>").map(Item::PlainStatement))
+        .then_ignore(literal("#>"))
+        .parse(input)
 }
 
 fn parse_component<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
@@ -63,14 +67,10 @@ fn parse_literal<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
     let Some(lead) = input.consume_count(1) else {
         return Err(Error::unexpected_eof());
     };
-
-    let mut parts = vec![lead];
-
-    while !input.is_at_end() {
-        parts.push(input.consume_until_any("<{").unwrap_or(input.consume_all()));
-    }
-
-    let combined = input.combine(&parts);
+    let rest = input
+        .consume_until_any("<{")
+        .unwrap_or_else(|| input.consume_all());
+    let combined = input.combine(&[lead, rest]);
 
     Ok(Some(Item::Literal(combined.into_cow())))
 }
@@ -126,6 +126,57 @@ mod tests {
             result.unwrap(),
             vec![Item::Expression(Cow::from(
                 "self.name.to_ascii_uppercase()"
+            ))]
+        );
+    }
+
+    #[test]
+    fn literal_with_expression() {
+        let mut parser = HtmlParser;
+
+        let input = Input::new("<div>{self.name.to_ascii_uppercase()}</div>");
+        let result = parser.parse(input);
+
+        assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
+        assert_eq!(
+            result.unwrap(),
+            vec![
+                Item::Literal(Cow::from("<div>")),
+                Item::Expression(Cow::from("self.name.to_ascii_uppercase()")),
+                Item::Literal(Cow::from("</div>"))
+            ]
+        );
+    }
+
+    #[test]
+    fn expression_then_literal() {
+        let mut parser = HtmlParser;
+
+        let input = Input::new("{self.name} is here");
+        let result = parser.parse(input);
+
+        assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
+        assert_eq!(
+            result.unwrap(),
+            vec![
+                Item::Expression(Cow::from("self.name")),
+                Item::Literal(Cow::from(" is here"))
+            ]
+        );
+    }
+
+    #[test]
+    fn plain_statement() {
+        let mut parser = HtmlParser;
+
+        let input = Input::new("<# println!(\"Hello, {}\", self.name) #>");
+        let result = parser.parse(input);
+
+        assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
+        assert_eq!(
+            result.unwrap(),
+            vec![Item::PlainStatement(Cow::from(
+                "println!(\"Hello, {}\", self.name) "
             ))]
         );
     }
