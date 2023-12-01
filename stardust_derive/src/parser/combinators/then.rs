@@ -2,15 +2,18 @@ use crate::parser::input::Input;
 
 use super::{Combinator, ParseResult};
 
+#[derive(Debug, Clone)]
 pub struct Then<C1, C2> {
     combinator1: C1,
     combinator2: C2,
 }
 
+#[derive(Debug, Clone)]
 pub struct IgnoreThen<C1, C2> {
     then: Then<C1, C2>,
 }
 
+#[derive(Debug, Clone)]
 pub struct ThenIgnore<C1, C2> {
     then: Then<C1, C2>,
 }

@@ -34,30 +34,40 @@ pub trait TemplateParser {
 pub enum Item<'src> {
     Literal(Cow<'src, str>),
     Expression(Cow<'src, str>),
-    BlockStatement {
-        keyword: BlockKeyword,
-        expr: Option<Cow<'src, str>>,
-        body: Vec<Item<'src>>,
-    },
     KeywordStatement {
-        keyword: InlineKeyword,
+        keyword: Keyword,
         statement: Option<Cow<'src, str>>,
+        body: Vec<Item<'src>>,
     },
     PlainStatement(Cow<'src, str>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum BlockKeyword {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Keyword {
     If,
     Else,
+    ElseIf,
     For,
     While,
     Loop,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum InlineKeyword {
     Break,
     Continue,
     Let,
+}
+
+impl Keyword {
+    pub fn requires_body(self) -> bool {
+        match self {
+            Keyword::If => true,
+            Keyword::Else => true,
+            Keyword::ElseIf => true,
+            Keyword::For => true,
+            Keyword::While => true,
+            Keyword::Loop => true,
+
+            Keyword::Break => false,
+            Keyword::Continue => false,
+            Keyword::Let => false,
+        }
+    }
 }

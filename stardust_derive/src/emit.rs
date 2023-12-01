@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::Error;
 
-use crate::parser::{BlockKeyword, InlineKeyword, Item};
+use crate::parser::{Item, Keyword};
 
 impl Item<'_> {
     pub(crate) fn emit_all(
@@ -24,32 +24,21 @@ impl Item<'_> {
                 })
             }
 
-            Item::BlockStatement {
+            Item::KeywordStatement {
                 keyword,
-                expr,
+                statement,
                 body,
             } => {
-                let expr = match expr {
-                    Some(expr) => Some(syn::parse_str::<syn::Expr>(expr.as_ref())?),
+                let statement = match statement {
+                    Some(s) => Some(syn::parse_str::<TokenStream>(s.as_ref())?),
                     None => None,
                 };
                 let body = Item::emit_all(body)?;
 
                 Ok(quote! {
-                    #keyword #expr {
+                    #keyword #statement {
                         #(#body)*
                     }
-                })
-            }
-
-            Item::KeywordStatement { keyword, statement } => {
-                let statement = match statement {
-                    Some(s) => Some(syn::parse_str::<TokenStream>(s.as_ref())?),
-                    None => None,
-                };
-
-                Ok(quote! {
-                    #keyword #statement;
                 })
             }
 
@@ -60,25 +49,18 @@ impl Item<'_> {
     }
 }
 
-impl ToTokens for BlockKeyword {
+impl ToTokens for Keyword {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let keyword = match self {
-            BlockKeyword::If => quote!(if),
-            BlockKeyword::Else => quote!(else),
-            BlockKeyword::For => quote!(for),
-            BlockKeyword::While => quote!(while),
-            BlockKeyword::Loop => quote!(loop),
-        };
-        keyword.to_tokens(tokens);
-    }
-}
-
-impl ToTokens for InlineKeyword {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let keyword = match self {
-            InlineKeyword::Break => quote!(break),
-            InlineKeyword::Continue => quote!(continue),
-            InlineKeyword::Let => quote!(let),
+            Keyword::If => quote!(if),
+            Keyword::Else => quote!(else),
+            Keyword::ElseIf => quote!(else if),
+            Keyword::For => quote!(for),
+            Keyword::While => quote!(while),
+            Keyword::Loop => quote!(loop),
+            Keyword::Break => quote!(break),
+            Keyword::Continue => quote!(continue),
+            Keyword::Let => quote!(let),
         };
         keyword.to_tokens(tokens);
     }
@@ -91,7 +73,7 @@ mod tests {
     use proc_macro2::TokenStream;
     use syn::Error;
 
-    use crate::parser::{BlockKeyword, Item};
+    use crate::parser::{Item, Keyword};
 
     #[test]
     fn literal() {
@@ -135,10 +117,10 @@ mod tests {
     }
 
     #[test]
-    fn block_statement_if() {
-        let items = vec![Item::BlockStatement {
-            keyword: BlockKeyword::If,
-            expr: Some(Cow::from("self.age > 18")),
+    fn keyword_statement_if() {
+        let items = vec![Item::KeywordStatement {
+            keyword: Keyword::If,
+            statement: Some(Cow::from("self.age > 18")),
             body: vec![Item::Literal(Cow::from("Hello, World!"))],
         }];
 
@@ -154,10 +136,10 @@ mod tests {
     }
 
     #[test]
-    fn block_statement_loop() {
-        let items = vec![Item::BlockStatement {
-            keyword: BlockKeyword::Loop,
-            expr: None,
+    fn keyword_statement_loop() {
+        let items = vec![Item::KeywordStatement {
+            keyword: Keyword::Loop,
+            statement: None,
             body: vec![Item::Literal(Cow::from("Hello, World!"))],
         }];
 
@@ -165,6 +147,25 @@ mod tests {
 
         let expected = quote! {
             loop {
+                write!(w, "{}", "Hello, World!")?;
+            }
+        };
+
+        assert_text(tokens, expected);
+    }
+
+    #[test]
+    fn keyword_statement_for() {
+        let items = vec![Item::KeywordStatement {
+            keyword: Keyword::For,
+            statement: Some(Cow::from("name in self.names")),
+            body: vec![Item::Literal(Cow::from("Hello, World!"))],
+        }];
+
+        let tokens = Item::emit_all(items);
+
+        let expected = quote! {
+            for name in self.names {
                 write!(w, "{}", "Hello, World!")?;
             }
         };

@@ -2,6 +2,7 @@ use crate::parser::input::Input;
 
 use super::{Combinator, ParseResult};
 
+#[derive(Debug, Clone)]
 pub struct Optional<C> {
     combinator: C,
 }

@@ -3,6 +3,7 @@
 use std::borrow::Cow;
 
 use self::{
+    filter::Filter,
     map::Map,
     optional::Optional,
     then::{IgnoreThen, Then, ThenIgnore},
@@ -13,6 +14,7 @@ use super::{
     input::{Input, Offset},
 };
 
+mod filter;
 mod map;
 mod optional;
 mod then;
@@ -24,6 +26,14 @@ pub trait Combinator<'src>: Sized {
 
     fn parse(self, input: &mut Input<'src>) -> ParseResult<Self::Output>;
 
+    fn peek(self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+        let position = input.position();
+        let result = self.parse(input);
+        input.reset_to(position);
+
+        result
+    }
+
     fn optional(self) -> Optional<Self> {
         Optional::new(self)
     }
@@ -33,6 +43,13 @@ pub trait Combinator<'src>: Sized {
         F: Fn(Self::Output) -> U,
     {
         Map::new(self, transform)
+    }
+
+    fn filter<F>(self, filter: F) -> Filter<Self, F>
+    where
+        F: Fn(&Self::Output) -> bool,
+    {
+        Filter::new(self, filter)
     }
 
     fn then<C>(self, next: C) -> Then<Self, C>
@@ -59,7 +76,7 @@ pub trait Combinator<'src>: Sized {
 
 impl<'src, T, F> Combinator<'src> for F
 where
-    F: Fn(&mut Input<'src>) -> ParseResult<T>,
+    F: FnOnce(&mut Input<'src>) -> ParseResult<T>,
 {
     type Output = T;
 
@@ -68,12 +85,45 @@ where
     }
 }
 
+pub fn insert<'src, T>(value: T) -> impl Combinator<'src, Output = T> {
+    move |_: &mut Input<'src>| Ok(Some(value))
+}
+
 pub fn literal<'src>(value: &'static str) -> impl Combinator<'src, Output = Offset<'src>> {
     move |input: &mut Input<'src>| Ok(input.consume_lit(value))
 }
 
 pub fn whitespace<'src>() -> impl Combinator<'src, Output = Offset<'src>> {
     move |input: &mut Input<'src>| Ok(input.consume_while(char::is_whitespace))
+}
+
+pub fn collect_until<'src, C, S>(
+    combinator: C,
+    sentinel: S,
+) -> impl Combinator<'src, Output = Vec<C::Output>>
+where
+    C: Combinator<'src> + Clone,
+    S: Combinator<'src> + Clone,
+{
+    move |input: &mut Input<'src>| {
+        let mut output = vec![];
+        let start = input.position();
+
+        while !input.is_at_end() {
+            if sentinel.clone().peek(input)?.is_some() {
+                return Ok(Some(output));
+            }
+
+            let Some(elem) = combinator.clone().parse(input)? else {
+                input.reset_to(start);
+                return Ok(None);
+            };
+
+            output.push(elem);
+        }
+
+        Err(Error::unexpected_eof())
+    }
 }
 
 pub fn take_until<'a>(terminator: &'a str, escape: &'a str) -> TakeUntil<'a> {
@@ -87,6 +137,7 @@ pub fn take_until<'a>(terminator: &'a str, escape: &'a str) -> TakeUntil<'a> {
     TakeUntil { terminator, escape }
 }
 
+#[derive(Debug, Clone)]
 pub struct TakeUntil<'a> {
     terminator: &'a str,
     escape: &'a str,

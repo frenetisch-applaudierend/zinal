@@ -4,6 +4,7 @@ use crate::parser::input::Input;
 
 use super::{Combinator, ParseResult};
 
+#[derive(Debug, Clone)]
 pub struct Map<C, F, T> {
     combinator: C,
     transform: F,

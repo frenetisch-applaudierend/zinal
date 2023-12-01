@@ -49,7 +49,6 @@ impl<'src> Input<'src> {
         &mut self,
         mut condition: impl FnMut(char) -> bool,
     ) -> Option<Offset<'src>> {
-        let mut taken = 0;
         let mut len = 0;
         for c in self.remainder.chars() {
             if !condition(c) {
