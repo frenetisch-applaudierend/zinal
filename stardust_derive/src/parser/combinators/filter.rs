@@ -2,6 +2,7 @@ use crate::parser::input::Input;
 
 use super::{Combinator, ParseResult};
 
+#[derive(Debug, Clone)]
 pub struct Filter<C, F> {
     combinator: C,
     filter: F,
@@ -16,7 +17,7 @@ impl<C, F> Filter<C, F> {
 impl<'src, C, F> Combinator<'src> for Filter<C, F>
 where
     C: Combinator<'src>,
-    F: Fn(&C::Output) -> bool,
+    F: (Fn(&C::Output) -> bool) + Clone,
 {
     type Output = C::Output;
 

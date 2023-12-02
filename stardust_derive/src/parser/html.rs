@@ -54,19 +54,21 @@ fn parse_expr<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
 }
 
 fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    literal("<#")
-        .ignore_then(whitespace().optional())
-        .ignore_then(select! {parse_keyword_statement, parse_plain_statement})
-        .parse(input)
+    select! {
+        parse_keyword_statement,
+        parse_plain_statement
+    }
+    .parse(input)
 }
 
 fn parse_keyword_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    let Some(start) = keyword_statement_start().parse(input)? else {
+    let Some(start) = keyword_statement_tag(keyword()).parse(input)? else {
         return Ok(None);
     };
 
-    let body = if start.0.requires_body() {
+    let body = if start.keyword.requires_body() {
         body()
+            .then_ignore(keyword_statement_tag(literal("end")).optional())
             .parse(input)?
             .ok_or(Error::new("Expected body after block statement"))?
     } else {
@@ -74,27 +76,58 @@ fn parse_keyword_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'s
     };
 
     return Ok(Some(Item::KeywordStatement {
-        keyword: start.0,
-        statement: start.1,
+        keyword: start.keyword,
+        statement: start.statement,
         body,
     }));
 
-    fn keyword_statement_start<'src>(
-    ) -> impl Combinator<'src, Output = (Keyword, Option<Cow<'src, str>>)> + Clone {
-        select! {
-            keyword().then_ignore(whitespace()).then(statement()).then_ignore(literal("#>")),
-            keyword().then_ignore(whitespace().optional()).then(insert(None)).then_ignore(literal(">"))
-        }
+    #[derive(Debug, Clone)]
+    struct KeywordStatementTag<'src, T> {
+        keyword: T,
+        statement: Option<Cow<'src, str>>,
     }
 
-    fn keyword_statement_end<'src>() -> impl Combinator<'src, Output = ()> + Clone {
+    fn keyword_statement_tag<'src, T: Clone>(
+        keyword: impl Combinator<'src, Output = T> + Clone,
+    ) -> impl Combinator<'src, Output = KeywordStatementTag<'src, T>> + Clone
+    where
+        T: Clone,
+    {
+        let statement = take_until("#>", "##>").map(|v| Some(v));
+
+        let longform = literal("<#")
+            .ignore_then(whitespace().optional())
+            .ignore_then(keyword.clone())
+            .then_ignore(whitespace())
+            .then(statement)
+            .then_ignore(literal("#>"));
+
+        let shortform = literal("<#")
+            .ignore_then(whitespace().optional())
+            .ignore_then(keyword)
+            .then(insert(None))
+            .then_ignore(whitespace().optional())
+            .then_ignore(select!(literal(">"), literal("#>")));
+
         select! {
-            literal("end").then(whitespace().optional()).then(select!(literal(">"), literal("#>"))).map(|_| ()),
-            keyword_statement_start().filter(|(keyword, _)| *keyword == Keyword::Else || *keyword == Keyword::ElseIf).map(|_| ())
+            longform,
+            shortform
         }
+        .map(|(keyword, statement)| KeywordStatementTag { keyword, statement })
     }
 
-    fn keyword<'src>() -> impl Combinator<'src, Output = Keyword> {
+    fn block_statement_end<'src>() -> impl Combinator<'src, Output = ()> + Clone {
+        let end_keyword = select!(
+            literal("end").map(|_| ()),
+            keyword()
+                .filter(|k| *k == Keyword::Else || *k == Keyword::ElseIf)
+                .map(|_| ())
+        );
+
+        keyword_statement_tag(end_keyword).map(|_| ())
+    }
+
+    fn keyword<'src>() -> impl Combinator<'src, Output = Keyword> + Clone {
         select! {
             literal("if").map(|_| Keyword::If),
             literal("else").then(whitespace()).then(literal("if")).map(|_| Keyword::ElseIf),
@@ -108,14 +141,9 @@ fn parse_keyword_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'s
         }
     }
 
-    fn statement<'src>() -> impl Combinator<'src, Output = Option<Cow<'src, str>>> {
-        take_until("#>", "##>").map(|v| Some(v))
-    }
-
     fn body<'src>() -> impl Combinator<'src, Output = Vec<Item<'src>>> {
         |input: &mut Input<'src>| {
-            let Some(body) = collect_until(parse_item, keyword_statement_end()).parse(input)?
-            else {
+            let Some(body) = collect_until(parse_item, block_statement_end()).parse(input)? else {
                 return Err(Error::unexpected_eof());
             };
 
@@ -125,7 +153,9 @@ fn parse_keyword_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'s
 }
 
 fn parse_plain_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    take_until("#>", "##>")
+    literal("<#")
+        .ignore_then(whitespace().optional())
+        .ignore_then(take_until("#>", "##>"))
         .then_ignore(literal("#>"))
         .map(Item::PlainStatement)
         .parse(input)
@@ -255,7 +285,7 @@ mod tests {
     }
 
     #[test]
-    fn block_statement() {
+    fn block_statement_for() {
         let mut parser = HtmlParser;
 
         let input = Input::new("<# for name in self.names #>Hello, {name}<#end>");
@@ -272,6 +302,38 @@ mod tests {
                     Item::Expression(Cow::from("name"))
                 ]
             }]
+        );
+    }
+
+    #[test]
+    fn block_statement_if() {
+        let mut parser = HtmlParser;
+
+        let input = Input::new(
+            "<#if age > 18 #>Over 18<# else if age < 18 #>Under 18<#else>Exactly 18<#end>",
+        );
+        let result = parser.parse(input);
+
+        assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
+        assert_eq!(
+            result.unwrap(),
+            vec![
+                Item::KeywordStatement {
+                    keyword: Keyword::If,
+                    statement: Some(Cow::from("age > 18 ")),
+                    body: vec![Item::Literal(Cow::from("Over 18")),]
+                },
+                Item::KeywordStatement {
+                    keyword: Keyword::ElseIf,
+                    statement: Some(Cow::from("age < 18 ")),
+                    body: vec![Item::Literal(Cow::from("Under 18")),]
+                },
+                Item::KeywordStatement {
+                    keyword: Keyword::Else,
+                    statement: None,
+                    body: vec![Item::Literal(Cow::from("Exactly 18")),]
+                }
+            ]
         );
     }
 }

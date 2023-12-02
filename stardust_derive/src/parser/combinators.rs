@@ -85,15 +85,15 @@ where
     }
 }
 
-pub fn insert<'src, T>(value: T) -> impl Combinator<'src, Output = T> {
+pub fn insert<'src, T: Clone>(value: T) -> impl Combinator<'src, Output = T> + Clone {
     move |_: &mut Input<'src>| Ok(Some(value))
 }
 
-pub fn literal<'src>(value: &'static str) -> impl Combinator<'src, Output = Offset<'src>> {
+pub fn literal<'src>(value: &'static str) -> impl Combinator<'src, Output = Offset<'src>> + Clone {
     move |input: &mut Input<'src>| Ok(input.consume_lit(value))
 }
 
-pub fn whitespace<'src>() -> impl Combinator<'src, Output = Offset<'src>> {
+pub fn whitespace<'src>() -> impl Combinator<'src, Output = Offset<'src>> + Clone {
     move |input: &mut Input<'src>| Ok(input.consume_while(char::is_whitespace))
 }
 
@@ -147,12 +147,13 @@ impl<'a, 'src> Combinator<'src> for TakeUntil<'a> {
     type Output = Cow<'src, str>;
 
     fn parse(self, input: &mut Input<'src>) -> ParseResult<Cow<'src, str>> {
+        let position = input.position();
         let mut result = Cow::Borrowed("");
 
         while !input.is_at_end() {
-            let consumed = input
-                .consume_until(self.terminator)
-                .ok_or(Error::unexpected_eof())?;
+            let Some(consumed) = input.consume_until(self.terminator) else {
+                break;
+            };
 
             if consumed.ends_with(self.escape) {
                 input
@@ -169,7 +170,8 @@ impl<'a, 'src> Combinator<'src> for TakeUntil<'a> {
             }
         }
 
-        Err(Error::unexpected_eof())
+        input.reset_to(position);
+        Ok(None)
     }
 }
 
