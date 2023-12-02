@@ -42,7 +42,7 @@ pub(crate) fn derive_template(input: ItemStruct) -> Result<TokenStream, Error> {
     };
 
     // Hand the output tokens back to the compiler
-    Ok(TokenStream::from(expanded))
+    Ok(expanded)
 }
 
 fn read_content(options: TemplateOptions) -> Result<(String, String), Error> {

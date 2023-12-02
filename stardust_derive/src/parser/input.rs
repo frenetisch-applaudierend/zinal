@@ -81,7 +81,7 @@ impl<'src> Input<'src> {
             len += c.len_utf8();
         }
 
-        return None;
+        None
     }
 
     pub fn consume_count(&mut self, count: usize) -> Option<Offset<'src>> {

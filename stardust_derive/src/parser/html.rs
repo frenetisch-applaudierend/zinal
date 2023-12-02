@@ -93,7 +93,7 @@ fn parse_keyword_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'s
     where
         T: Clone,
     {
-        let statement = take_until("#>", "##>").map(|v| Some(v));
+        let statement = take_until("#>", "##>").map(Some);
 
         let longform = literal("<#")
             .ignore_then(whitespace().optional())
