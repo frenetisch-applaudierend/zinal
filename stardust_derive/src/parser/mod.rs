@@ -40,6 +40,10 @@ pub enum Item<'src> {
         body: Vec<Item<'src>>,
     },
     PlainStatement(Cow<'src, str>),
+    ChildTemplate {
+        name: Cow<'src, str>,
+        arguments: Vec<TemplateArgument<'src>>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,6 +57,18 @@ pub enum Keyword {
     Break,
     Continue,
     Let,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TemplateArgument<'src> {
+    pub(crate) name: Cow<'src, str>,
+    pub(crate) value: TemplateArgumentValue<'src>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TemplateArgumentValue<'src> {
+    Literal(Cow<'src, str>),
+    Expression(Cow<'src, str>),
 }
 
 impl Keyword {

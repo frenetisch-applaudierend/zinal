@@ -2,7 +2,11 @@ use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::Error;
 
-use crate::parser::{Item, Keyword};
+use crate::parser::{Item, Keyword, TemplateArgument, TemplateArgumentValue};
+
+trait Emit {
+    fn emit(self) -> Result<TokenStream, Error>;
+}
 
 impl Item<'_> {
     pub(crate) fn emit_all(
@@ -10,8 +14,10 @@ impl Item<'_> {
     ) -> Result<Vec<TokenStream>, Error> {
         items.into_iter().map(Item::emit).collect::<Result<_, _>>()
     }
+}
 
-    pub(crate) fn emit(self) -> Result<TokenStream, Error> {
+impl Emit for Item<'_> {
+    fn emit(self) -> Result<TokenStream, Error> {
         match self {
             Item::Literal(s) => Ok(quote! {
                 write!(w, "{}", #s)?;
@@ -45,6 +51,22 @@ impl Item<'_> {
             Item::PlainStatement(tokens) => Ok(quote! {
                 #tokens;
             }),
+
+            Item::ChildTemplate { name, arguments } => {
+                let ty = syn::parse_str::<syn::TypePath>(name.as_ref())?;
+                let arguments = arguments
+                    .into_iter()
+                    .map(Emit::emit)
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                let template = quote! {
+                    #ty { #(#arguments),* }
+                };
+
+                Ok(quote! {
+                    ::stardust::Renderable::render_to(&#template, w)?;
+                })
+            }
         }
     }
 }
@@ -66,6 +88,28 @@ impl ToTokens for Keyword {
     }
 }
 
+impl Emit for TemplateArgument<'_> {
+    fn emit(self) -> Result<TokenStream, Error> {
+        let name = syn::parse_str::<syn::Ident>(self.name.as_ref())?;
+        let value = self.value.emit()?;
+
+        Ok(quote! {
+            #name: #value
+        })
+    }
+}
+
+impl Emit for TemplateArgumentValue<'_> {
+    fn emit(self) -> Result<TokenStream, Error> {
+        Ok(match self {
+            TemplateArgumentValue::Literal(v) => quote!(#v.into()),
+            TemplateArgumentValue::Expression(expr) => {
+                syn::parse_str::<TokenStream>(expr.as_ref())?
+            }
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
@@ -73,7 +117,7 @@ mod tests {
     use proc_macro2::TokenStream;
     use syn::Error;
 
-    use crate::parser::{Item, Keyword};
+    use crate::parser::{Item, Keyword, TemplateArgument, TemplateArgumentValue};
 
     #[test]
     fn literal() {
@@ -168,6 +212,34 @@ mod tests {
             for name in self.names {
                 write!(w, "{}", "Hello, World!")?;
             }
+        };
+
+        assert_text(tokens, expected);
+    }
+
+    #[test]
+    fn child_template() {
+        let items = vec![Item::ChildTemplate {
+            name: Cow::from("::module::Type"),
+            arguments: vec![
+                TemplateArgument {
+                    name: Cow::from("expr"),
+                    value: TemplateArgumentValue::Expression(Cow::from("self.name")),
+                },
+                TemplateArgument {
+                    name: Cow::from("lit"),
+                    value: TemplateArgumentValue::Literal(Cow::from("Literal")),
+                },
+            ],
+        }];
+
+        let tokens = Item::emit_all(items);
+
+        let expected = quote! {
+            ::stardust::Renderable::render_to(&::module::Type {
+                expr: self.name,
+                lit: "Literal".into()
+            }, w)?;
         };
 
         assert_text(tokens, expected);
