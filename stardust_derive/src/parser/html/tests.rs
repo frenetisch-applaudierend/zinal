@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 
-use crate::parser::{input::Input, Item, Keyword, TemplateParser};
+use crate::parser::{
+    input::Input, Item, Keyword, TemplateArgument, TemplateArgumentValue, TemplateParser,
+};
 
 use super::HtmlParser;
 
@@ -166,22 +168,23 @@ fn child_template() {
     assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
     assert_eq!(
         result.unwrap(),
-        vec![
-            Item::KeywordStatement {
-                keyword: Keyword::If,
-                statement: Some(Cow::from("age > 18 ")),
-                body: vec![Item::Literal(Cow::from("Over 18")),]
-            },
-            Item::KeywordStatement {
-                keyword: Keyword::ElseIf,
-                statement: Some(Cow::from("age < 18 ")),
-                body: vec![Item::Literal(Cow::from("Under 18")),]
-            },
-            Item::KeywordStatement {
-                keyword: Keyword::Else,
-                statement: None,
-                body: vec![Item::Literal(Cow::from("Exactly 18")),]
-            }
-        ]
+        vec![Item::ChildTemplate {
+            name: Cow::from("Child"),
+            arguments: vec![
+                TemplateArgument {
+                    name: "expr",
+                    value: TemplateArgumentValue::Expression(Cow::from("self.name"))
+                },
+                TemplateArgument {
+                    name: "lit_double",
+                    value: TemplateArgumentValue::Literal(Cow::from("test double"))
+                },
+                TemplateArgument {
+                    name: "lit_single",
+                    value: TemplateArgumentValue::Expression(Cow::from("test single"))
+                }
+            ],
+            children: vec![]
+        }]
     );
 }

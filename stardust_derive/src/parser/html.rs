@@ -31,7 +31,7 @@ fn parse_item<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
         parse_escape,
         parse_expr,
         parse_statement,
-        parse_component,
+        parse_child_template,
         parse_literal
     }
     .parse(input)
@@ -161,8 +161,14 @@ fn parse_plain_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src
         .parse(input)
 }
 
-fn parse_component<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-    Ok(None)
+fn parse_child_template<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
+    return Ok(None);
+
+    fn name<'src>() -> impl Combinator<'src, Output = Cow<'src, str>> {
+        let separator = literal("::");
+        let 
+        todo!()
+    }
 }
 
 fn parse_literal<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {

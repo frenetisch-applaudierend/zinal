@@ -126,6 +126,12 @@ where
     }
 }
 
+pub fn take_while(
+    predicate: impl FnMut(char) -> bool,
+) -> impl Combinator<'src, Output = Offset<'src>> {
+    todo!()
+}
+
 pub fn take_until<'a>(terminator: &'a str, escape: &'a str) -> TakeUntil<'a> {
     debug_assert!(
         escape.ends_with(terminator),
@@ -196,4 +202,19 @@ macro_rules! _select_inner {
         _select_inner! { $i => $c }
         _select_inner! { $i => $($cs),+ }
     };
+}
+
+pub fn identifier<'src>() -> impl Combinator<'src, Output = Offset<'src>> {
+    move |input: &mut Input<'src>| {
+        let underscore = literal("_");
+        let xid_start = take_while(unicode_xid::UnicodeXID::is_xid_start);
+        let xid_cont = take_while(unicode_xid::UnicodeXID::is_xid_continue);
+
+        select! {
+            underscore.then(xid_cont.filter(|s| s.len() > 0)),
+            xid_start.filter(|s| s.len() > 0).then(xid_cont)
+        }
+        .map(|(start, rest)| input.combine(&[start, rest]))
+        .parse(input)
+    }
 }

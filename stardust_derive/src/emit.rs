@@ -52,7 +52,11 @@ impl Emit for Item<'_> {
                 #tokens;
             }),
 
-            Item::ChildTemplate { name, arguments } => {
+            Item::ChildTemplate {
+                name,
+                arguments,
+                children: _,
+            } => {
                 let ty = syn::parse_str::<syn::TypePath>(name.as_ref())?;
                 let arguments = arguments
                     .into_iter()
@@ -90,7 +94,7 @@ impl ToTokens for Keyword {
 
 impl Emit for TemplateArgument<'_> {
     fn emit(self) -> Result<TokenStream, Error> {
-        let name = syn::parse_str::<syn::Ident>(self.name.as_ref())?;
+        let name = syn::parse_str::<syn::Ident>(self.name)?;
         let value = self.value.emit()?;
 
         Ok(quote! {
@@ -223,14 +227,15 @@ mod tests {
             name: Cow::from("::module::Type"),
             arguments: vec![
                 TemplateArgument {
-                    name: Cow::from("expr"),
+                    name: "expr",
                     value: TemplateArgumentValue::Expression(Cow::from("self.name")),
                 },
                 TemplateArgument {
-                    name: Cow::from("lit"),
+                    name: "lit",
                     value: TemplateArgumentValue::Literal(Cow::from("Literal")),
                 },
             ],
+            children: vec![],
         }];
 
         let tokens = Item::emit_all(items);

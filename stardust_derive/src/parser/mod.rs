@@ -43,6 +43,7 @@ pub enum Item<'src> {
     ChildTemplate {
         name: Cow<'src, str>,
         arguments: Vec<TemplateArgument<'src>>,
+        children: Vec<Item<'src>>,
     },
 }
 
@@ -61,7 +62,7 @@ pub enum Keyword {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TemplateArgument<'src> {
-    pub(crate) name: Cow<'src, str>,
+    pub(crate) name: &'src str,
     pub(crate) value: TemplateArgumentValue<'src>,
 }
 
