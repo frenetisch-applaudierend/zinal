@@ -1,14 +1,14 @@
 mod combinators;
-mod common;
 mod generators;
 mod input;
+mod parsers;
 
 use std::borrow::Cow;
 
 pub use combinators::*;
-pub use common::*;
 pub use generators::*;
 pub use input::*;
+pub use parsers::*;
 
 pub trait Parser<'src>: Sized {
     type Output;
