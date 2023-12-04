@@ -2,7 +2,8 @@
 resolver = "2"
 members = [
   "stardust",
-  "stardust_derive"
+  "stardust_derive",
+  "parser_common"
 ]
 exclude = [
   "examples"
