@@ -57,10 +57,7 @@ impl<'src> Input<'src> {
         }
     }
 
-    pub fn consume_while(
-        &mut self,
-        mut condition: impl FnMut(char) -> bool,
-    ) -> Option<Offset<'src>> {
+    pub fn consume_while(&mut self, mut condition: impl Fn(char) -> bool) -> Option<Offset<'src>> {
         let mut len = 0;
         for c in self.remainder.chars() {
             if !condition(c) {

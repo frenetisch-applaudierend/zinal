@@ -29,6 +29,13 @@ pub trait Parser<'src>: Sized {
         Map::new(self, transform)
     }
 
+    fn filter<F>(self, filter: F) -> Filter<Self, F>
+    where
+        F: Fn(&Self::Output) -> bool,
+    {
+        Filter::new(self, filter)
+    }
+
     fn optional(self) -> Optional<Self> {
         Optional::new(self)
     }

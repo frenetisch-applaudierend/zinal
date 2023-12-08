@@ -1,15 +1,8 @@
 use std::borrow::Cow;
 
-use crate::parser::{
-    combinators::{collect_until, insert, literal},
-    Keyword,
-};
+use parser_common::{ParseResult, take_until, literal};
 
-use super::{
-    combinators::{take_until, whitespace, Combinator, ParseResult},
-    input::Input,
-    Error, Item, TemplateParser,
-};
+use super::{TemplateParser, input::Input, Item, error::Error};
 
 pub struct HtmlParser;
 

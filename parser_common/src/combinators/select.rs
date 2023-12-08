@@ -1,15 +1,6 @@
 #![macro_use]
 
-mod filter;
-mod map;
-mod optional;
-mod then;
-
-pub use filter::*;
-pub use map::*;
-pub use optional::*;
-pub use then::*;
-
+#[macro_export]
 macro_rules! select {
     ($($cs:expr),+) => {
         |input: &mut Input<'src>| {
@@ -22,7 +13,7 @@ macro_rules! select {
 
 macro_rules! _select_inner {
     ($i:expr => $c:expr) => {
-        if let Some(r) = Parser::parse(&$c, $i)? {
+        if let Some(r) = Combinator::parse(&$c, $i)? {
             return Ok(Some(r));
         }
     };
