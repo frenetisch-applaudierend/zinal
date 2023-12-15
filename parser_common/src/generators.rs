@@ -16,6 +16,10 @@ pub fn insert<'src, T: Clone>(value: T) -> impl Parser<'src, Output = T> {
     move |_: &mut Input<'src>| Ok(Some(value.clone()))
 }
 
+pub fn todo<'src, T>() -> impl Parser<'src, Output = T> {
+    move |_: &mut Input<'src>| Ok(None)
+}
+
 pub fn take_while<'src>(
     predicate: impl Fn(char) -> bool,
 ) -> impl Parser<'src, Output = Offset<'src>> {

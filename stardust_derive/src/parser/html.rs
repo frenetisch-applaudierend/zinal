@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use parser_common::{literal, select, take_until, whitespace, Input, ParseResult, Parser};
+use parser_common::{literal, select, take_until, todo, whitespace, Input, ParseResult, Parser};
 use proc_macro2::Span;
 
 use super::{Item, TemplateParser};
@@ -21,7 +21,7 @@ fn template_item<'src>() -> impl Parser<'src, Output = Item<'src>> {
     select((
         escape(),
         expression(),
-        // parse_statement,
+        statement(),
         // parse_child_template,
         // parse_literal,
     ))
@@ -44,9 +44,26 @@ fn expression<'src>() -> impl Parser<'src, Output = Item<'src>> {
         .then_expect_ignore(end())
 }
 
-// fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-//     select((parse_keyword_statement, parse_plain_statement)).parse(input)
-// }
+fn statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
+    return select((keyword_statement(), plain_statement()));
+
+    fn keyword_statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
+        todo()
+    }
+
+    fn plain_statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
+        let start = || literal("<#").then(whitespace());
+        let end = || whitespace().then(literal("#>"));
+
+        start()
+            .ignore_then(
+                take_until(end())
+                    .escape("##>", "#>")
+                    .map(Item::PlainStatement),
+            )
+            .then_expect_ignore(end())
+    }
+}
 
 // fn parse_keyword_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
 //     let Some(start) = keyword_statement_tag(keyword()).parse(input)? else {

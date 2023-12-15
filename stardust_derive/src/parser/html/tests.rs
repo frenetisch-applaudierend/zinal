@@ -123,7 +123,23 @@ fn plain_statement() {
     assert_eq!(
         result.unwrap(),
         vec![Item::PlainStatement(Cow::from(
-            "println!(\"Hello, {}\", self.name) "
+            "println!(\"Hello, {}\", self.name)"
+        ))]
+    );
+}
+
+#[test]
+fn plain_statement_with_escape() {
+    let mut parser = HtmlParser;
+
+    let input = Input::new("<# println!(\"Hello, <# Nested ##>\") #>");
+    let result = parser.parse(input);
+
+    assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
+    assert_eq!(
+        result.unwrap(),
+        vec![Item::PlainStatement(Cow::from(
+            "println!(\"Hello, <# Nested #>\")"
         ))]
     );
 }
