@@ -44,7 +44,7 @@ pub trait Parser<'src>: Sized {
     where
         P: Parser<'src>,
     {
-        Then::new(self, next)
+        Then::new(self, false, next, false)
     }
 
     fn ignore_then<P>(self, next: P) -> IgnoreThen<Self, P>
@@ -58,7 +58,18 @@ pub trait Parser<'src>: Sized {
     where
         P: Parser<'src>,
     {
-        ThenIgnore::new(self, next)
+        ThenIgnore::new(self, next, false)
+    }
+
+    fn then_expect_ignore<P>(self, next: P) -> ThenIgnore<Self, P>
+    where
+        P: Parser<'src>,
+    {
+        ThenIgnore::new(self, next, true)
+    }
+
+    fn repeated(self) -> Repeated<Self> {
+        Repeated::new(self)
     }
 }
 

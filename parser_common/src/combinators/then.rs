@@ -1,8 +1,10 @@
-use crate::{Input, ParseResult, Parser};
+use crate::{Input, ParseError, ParseResult, Parser};
 
 pub struct Then<P1, P2> {
     parser1: P1,
+    parser1_expected: bool,
     parser2: P2,
+    parser2_expected: bool,
 }
 
 pub struct IgnoreThen<P1, P2> {
@@ -14,23 +16,28 @@ pub struct ThenIgnore<P1, P2> {
 }
 
 impl<P1, P2> Then<P1, P2> {
-    pub fn new(parser1: P1, parser2: P2) -> Self {
-        Self { parser1, parser2 }
+    pub fn new(parser1: P1, parser1_expected: bool, parser2: P2, parser2_expected: bool) -> Self {
+        Self {
+            parser1,
+            parser1_expected,
+            parser2,
+            parser2_expected,
+        }
     }
 }
 
 impl<P1, P2> IgnoreThen<P1, P2> {
     pub fn new(parser1: P1, parser2: P2) -> Self {
         Self {
-            then: Then::new(parser1, parser2),
+            then: Then::new(parser1, false, parser2, false),
         }
     }
 }
 
 impl<P1, P2> ThenIgnore<P1, P2> {
-    pub fn new(parser1: P1, parser2: P2) -> Self {
+    pub fn new(parser1: P1, parser2: P2, expected: bool) -> Self {
         Self {
-            then: Then::new(parser1, parser2),
+            then: Then::new(parser1, false, parser2, expected),
         }
     }
 }
@@ -46,11 +53,17 @@ where
         let position = input.position();
 
         let Some(result1) = self.parser1.parse(input)? else {
+            if self.parser1_expected {
+                return Err(ParseError::new("Expected content not found"));
+            }
             input.reset_to(position);
             return Ok(None);
         };
 
         let Some(result2) = self.parser2.parse(input)? else {
+            if self.parser2_expected {
+                return Err(ParseError::new("Expected content not found"));
+            }
             input.reset_to(position);
             return Ok(None);
         };

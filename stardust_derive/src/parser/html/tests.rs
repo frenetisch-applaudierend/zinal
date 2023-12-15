@@ -54,6 +54,30 @@ fn expression() {
 }
 
 #[test]
+fn expression_with_escape_and_whitespace() {
+    let mut parser = HtmlParser;
+
+    let input = Input::new("{ format!(\"{}}\", foo) }");
+    let result = parser.parse(input);
+
+    assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
+    assert_eq!(
+        result.unwrap(),
+        vec![Item::Expression(Cow::from("format!(\"{}\", foo)"))]
+    );
+}
+
+#[test]
+fn expression_unterminated() {
+    let mut parser = HtmlParser;
+
+    let input = Input::new("{ format!(\"{}}\", foo) ");
+    let result = parser.parse(input);
+
+    assert!(result.is_err(), "Unexpectedly succeeded");
+}
+
+#[test]
 fn literal_with_expression() {
     let mut parser = HtmlParser;
 

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use parser_common::{literal, select, Input, ParseResult, Parser};
+use parser_common::{literal, select, take_until, whitespace, Input, ParseResult, Parser};
 use proc_macro2::Span;
 
 use super::{Item, TemplateParser};
@@ -9,45 +9,40 @@ pub struct HtmlParser;
 
 impl TemplateParser for HtmlParser {
     fn parse<'src>(&mut self, mut input: Input<'src>) -> Result<Vec<Item<'src>>, syn::Error> {
-        let mut items = Vec::<Item<'src>>::new();
-        while !input.is_at_end() {
-            match parse_item(&mut input)
-                .map_err(|err| syn::Error::new(Span::call_site(), err.to_string()))?
-            {
-                Some(item) => items.push(item),
-                None => unreachable!(),
-            }
-        }
-        Ok(items)
+        Ok(template_item()
+            .repeated()
+            .parse(&mut input)
+            .map_err(|err| syn::Error::new(Span::call_site(), err.to_string()))?
+            .expect("Expected a Vec<Item>"))
     }
 }
 
-fn parse_item<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
+fn template_item<'src>() -> impl Parser<'src, Output = Item<'src>> {
     select((
-        parse_escape,
-        // parse_expr,
+        escape(),
+        expression(),
         // parse_statement,
         // parse_child_template,
         // parse_literal,
     ))
-    .parse(input)
 }
 
-fn parse_escape<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
+fn escape<'src>() -> impl Parser<'src, Output = Item<'src>> {
     select((
         literal("{{").map(|_| Cow::from("{")),
         literal("<##").map(|_| Cow::from("<#")),
     ))
     .map(Item::Literal)
-    .parse(input)
 }
 
-// fn parse_expr<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-//     literal("{")
-//         .ignore_then(take_until("}").escape("}}", "}").map(Item::Expression))
-//         .then_ignore(literal("}"))
-//         .parse(input)
-// }
+fn expression<'src>() -> impl Parser<'src, Output = Item<'src>> {
+    let start = || literal("{").then(whitespace());
+    let end = || whitespace().then(literal("}"));
+
+    start()
+        .ignore_then(take_until(end()).escape("}}", "}").map(Item::Expression))
+        .then_expect_ignore(end())
+}
 
 // fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
 //     select((parse_keyword_statement, parse_plain_statement)).parse(input)
