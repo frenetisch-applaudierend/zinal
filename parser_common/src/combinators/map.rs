@@ -33,6 +33,32 @@ where
     }
 }
 
+pub struct To<P, T> {
+    parser: P,
+    value: T,
+}
+
+impl<P, T> To<P, T> {
+    pub fn new(parser: P, value: T) -> Self {
+        Self { parser, value }
+    }
+}
+
+impl<'src, P, T> Parser<'src> for To<P, T>
+where
+    P: Parser<'src>,
+    T: Clone,
+{
+    type Output = T;
+
+    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+        match self.parser.parse(input)? {
+            Some(_) => Ok(Some(self.value.clone())),
+            None => Ok(None),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{parser, Input, Parser};

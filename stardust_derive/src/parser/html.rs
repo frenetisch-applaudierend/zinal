@@ -3,6 +3,8 @@ use std::borrow::Cow;
 use parser_common::{literal, select, take_until, todo, whitespace, Input, ParseResult, Parser};
 use proc_macro2::Span;
 
+use crate::parser::Keyword;
+
 use super::{Item, TemplateParser};
 
 pub struct HtmlParser;
@@ -48,7 +50,26 @@ fn statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
     return select((keyword_statement(), plain_statement()));
 
     fn keyword_statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
-        todo()
+        return select((simple_keyword_statement(), block_keyword_statement()));
+
+        fn simple_keyword_statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
+            let simple_keywords = select((
+                literal("break").to(Keyword::Break),
+                literal("continue").to(Keyword::Continue),
+                literal("let").to(Keyword::Let),
+            ));
+            keyword_tag(simple_keywords)
+        }
+
+        fn block_keyword_statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
+            todo()
+        }
+
+        fn keyword_tag<'src>(
+            keyword: impl Parser<'src, Output = Keyword>,
+        ) -> impl Parser<'src, Output = Item<'src>> {
+            todo()
+        }
     }
 
     fn plain_statement<'src>() -> impl Parser<'src, Output = Item<'src>> {

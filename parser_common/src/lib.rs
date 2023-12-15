@@ -29,6 +29,10 @@ pub trait Parser<'src>: Sized {
         Map::new(self, transform)
     }
 
+    fn to<U: Clone>(self, value: U) -> To<Self, U> {
+        To::new(self, value)
+    }
+
     fn filter<F>(self, filter: F) -> Filter<Self, F>
     where
         F: Fn(&Self::Output) -> bool,
