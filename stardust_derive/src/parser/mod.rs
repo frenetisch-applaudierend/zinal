@@ -49,6 +49,7 @@ pub enum Keyword {
     For,
     While,
     Loop,
+    End,
     Break,
     Continue,
     Let,

@@ -53,22 +53,87 @@ fn statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
         return select((simple_keyword_statement(), block_keyword_statement()));
 
         fn simple_keyword_statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
-            let simple_keywords = select((
-                literal("break").to(Keyword::Break),
-                literal("continue").to(Keyword::Continue),
-                literal("let").to(Keyword::Let),
-            ));
+            let simple_keywords = || {
+                select((
+                    literal("break").to(Keyword::Break),
+                    literal("continue").to(Keyword::Continue),
+                    literal("let").to(Keyword::Let),
+                ))
+            };
+
             keyword_tag(simple_keywords)
         }
 
         fn block_keyword_statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
-            todo()
+            let block_keywords = || {
+                select((
+                    literal("if").to(Keyword::If),
+                    literal("else").to(Keyword::Else),
+                    literal("else")
+                        .then(whitespace())
+                        .then(literal("if"))
+                        .to(Keyword::ElseIf),
+                    literal("for").to(Keyword::For),
+                    literal("while").to(Keyword::While),
+                    literal("loop").to(Keyword::Loop),
+                ))
+            };
+
+            let block_end_keywords = || {
+                select((
+                    literal("end").to(Keyword::End),
+                    literal("else").to(Keyword::Else),
+                    literal("else")
+                        .then(whitespace())
+                        .then(literal("if"))
+                        .to(Keyword::ElseIf),
+                ))
+            };
+
+            let block_end = || keyword_tag(block_end_keywords());
+
+            keyword_tag(block_keywords).then(template_item().repeated_until(block_end()))
         }
 
-        fn keyword_tag<'src>(
-            keyword: impl Parser<'src, Output = Keyword>,
-        ) -> impl Parser<'src, Output = Item<'src>> {
-            todo()
+        fn keyword_tag<'src, F, K>(keyword: F) -> impl Parser<'src, Output = Item<'src>>
+        where
+            F: Fn() -> K,
+            K: Parser<'src, Output = Keyword>,
+        {
+            return select((shorthand_tag(keyword()), longform_tag(keyword())));
+
+            fn shorthand_tag<'src>(
+                keyword: impl Parser<'src, Output = Keyword>,
+            ) -> impl Parser<'src, Output = Item<'src>> {
+                literal("<#")
+                    .ignore_then(whitespace())
+                    .ignore_then(keyword)
+                    .then_ignore(whitespace())
+                    .then_ignore(literal(">"))
+                    .map(|k| Item::KeywordStatement {
+                        keyword: k,
+                        statement: None,
+                        body: Vec::new(),
+                    })
+            }
+
+            fn longform_tag<'src>(
+                keyword: impl Parser<'src, Output = Keyword>,
+            ) -> impl Parser<'src, Output = Item<'src>> {
+                let end = || whitespace().then(literal("#>"));
+
+                literal("<#")
+                    .ignore_then(whitespace())
+                    .ignore_then(keyword)
+                    .then_ignore(whitespace().not_empty())
+                    .then(take_until(end()).escape("##>", "#>").optional())
+                    .then_ignore(end())
+                    .map(|(k, s)| Item::KeywordStatement {
+                        keyword: k,
+                        statement: s,
+                        body: Vec::new(),
+                    })
+            }
         }
     }
 

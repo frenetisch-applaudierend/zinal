@@ -75,6 +75,13 @@ pub trait Parser<'src>: Sized {
     fn repeated(self) -> Repeated<Self> {
         Repeated::new(self)
     }
+
+    fn repeated_until<T>(self, terminator: T) -> RepeatedUntil<Self, T>
+    where
+        T: Parser<'src>,
+    {
+        RepeatedUntil::new(self, terminator)
+    }
 }
 
 pub type ParseResult<T> = Result<Option<T>, ParseError>;

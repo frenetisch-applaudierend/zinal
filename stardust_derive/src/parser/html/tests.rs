@@ -145,6 +145,42 @@ fn plain_statement_with_escape() {
 }
 
 #[test]
+fn keyword_statement_shorthand() {
+    let mut parser = HtmlParser;
+
+    let input = Input::new("<#break>");
+    let result = parser.parse(input);
+
+    assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
+    assert_eq!(
+        result.unwrap(),
+        vec![Item::KeywordStatement {
+            keyword: Keyword::Break,
+            statement: None,
+            body: Vec::new()
+        }]
+    );
+}
+
+#[test]
+fn keyword_statement_longform() {
+    let mut parser = HtmlParser;
+
+    let input = Input::new("<# break 'outer #>");
+    let result = parser.parse(input);
+
+    assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
+    assert_eq!(
+        result.unwrap(),
+        vec![Item::KeywordStatement {
+            keyword: Keyword::Break,
+            statement: Some(Cow::Borrowed("'outer")),
+            body: Vec::new()
+        }]
+    );
+}
+
+#[test]
 fn block_statement_for() {
     let mut parser = HtmlParser;
 

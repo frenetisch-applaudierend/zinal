@@ -9,8 +9,8 @@ pub struct Whitespace {
 }
 
 impl Whitespace {
-    pub fn at_least(self, count: usize) -> Self {
-        Self { min_count: count }
+    pub fn not_empty(self) -> Self {
+        Self { min_count: 1 }
     }
 }
 

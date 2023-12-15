@@ -126,3 +126,43 @@ where
         Ok(None)
     }
 }
+
+impl<'src, P1, P2, P3, P4, P5, P6> Parser<'src> for Select<(P1, P2, P3, P4, P5, P6)>
+where
+    P1: Parser<'src>,
+    P2: Parser<'src, Output = P1::Output>,
+    P3: Parser<'src, Output = P1::Output>,
+    P4: Parser<'src, Output = P1::Output>,
+    P5: Parser<'src, Output = P1::Output>,
+    P6: Parser<'src, Output = P1::Output>,
+{
+    type Output = P1::Output;
+
+    fn parse(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<Self::Output> {
+        if let Some(result) = self.0 .0.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        if let Some(result) = self.0 .1.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        if let Some(result) = self.0 .2.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        if let Some(result) = self.0 .3.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        if let Some(result) = self.0 .4.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        if let Some(result) = self.0 .5.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        Ok(None)
+    }
+}
