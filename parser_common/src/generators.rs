@@ -1,4 +1,4 @@
-use crate::{Input, Offset, ParseError, Parser};
+use crate::{Input, Offset, Parser};
 
 mod func;
 mod take_until;

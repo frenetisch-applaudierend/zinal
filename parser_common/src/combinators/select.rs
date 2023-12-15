@@ -1,25 +1,73 @@
-#![macro_use]
+use crate::Parser;
 
-#[macro_export]
-macro_rules! select {
-    ($($cs:expr),+) => {
-        |input: &mut Input<'src>| {
-            _select_inner! { input => $($cs),+ }
-
-            Ok(None)
-        }
-    };
+pub fn select<P>(choices: P) -> Select<P> {
+    Select(choices)
 }
 
-macro_rules! _select_inner {
-    ($i:expr => $c:expr) => {
-        if let Some(r) = Combinator::parse(&$c, $i)? {
-            return Ok(Some(r));
-        }
-    };
+pub struct Select<T>(T);
 
-    ($i:expr => $c:expr, $($cs:expr),+) => {
-        _select_inner! { $i => $c }
-        _select_inner! { $i => $($cs),+ }
-    };
+impl<'src, P1> Parser<'src> for Select<(P1,)>
+where
+    P1: Parser<'src>,
+{
+    type Output = P1::Output;
+
+    fn parse(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<Self::Output> {
+        self.0 .0.parse(input)
+    }
+}
+
+impl<'src, P1, P2> Parser<'src> for Select<(P1, P2)>
+where
+    P1: Parser<'src>,
+    P2: Parser<'src, Output = P1::Output>,
+{
+    type Output = P1::Output;
+
+    fn parse(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<Self::Output> {
+        if let Some(result) = self.0 .0.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        if let Some(result) = self.0 .1.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        Ok(None)
+    }
+}
+
+impl<'src, P1, P2, P3, P4, P5> Parser<'src> for Select<(P1, P2, P3, P4, P5)>
+where
+    P1: Parser<'src>,
+    P2: Parser<'src, Output = P1::Output>,
+    P3: Parser<'src, Output = P1::Output>,
+    P4: Parser<'src, Output = P1::Output>,
+    P5: Parser<'src, Output = P1::Output>,
+{
+    type Output = P1::Output;
+
+    fn parse(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<Self::Output> {
+        if let Some(result) = self.0 .0.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        if let Some(result) = self.0 .1.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        if let Some(result) = self.0 .2.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        if let Some(result) = self.0 .3.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        if let Some(result) = self.0 .4.parse(input)? {
+            return Ok(Some(result));
+        }
+
+        Ok(None)
+    }
 }

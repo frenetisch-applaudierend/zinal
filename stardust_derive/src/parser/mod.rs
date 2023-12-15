@@ -1,13 +1,9 @@
 use std::borrow::Cow;
 
+use parser_common::Input;
 use proc_macro2::Span;
 
-use self::{error::Error, input::Input};
-
-mod combinators;
-mod error;
 mod html;
-mod input;
 
 pub fn parse<'src>(source: &'src str, content_type: &str) -> Result<Vec<Item<'src>>, syn::Error> {
     let input = Input::new(source);
@@ -21,13 +17,11 @@ pub fn parse<'src>(source: &'src str, content_type: &str) -> Result<Vec<Item<'sr
         }
     };
 
-    parser
-        .parse(input)
-        .map_err(|err| syn::Error::new(Span::call_site(), err.message))
+    parser.parse(input)
 }
 
 pub trait TemplateParser {
-    fn parse<'src>(&mut self, input: Input<'src>) -> Result<Vec<Item<'src>>, Error>;
+    fn parse<'src>(&mut self, input: Input<'src>) -> Result<Vec<Item<'src>>, syn::Error>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
