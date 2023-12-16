@@ -11,13 +11,13 @@ impl<P> Optional<P> {
     }
 }
 
-impl<'src, P> Parser<'src> for Optional<P>
+impl<P> Parser for Optional<P>
 where
-    P: Parser<'src>,
+    P: Parser,
 {
     type Output = Option<P::Output>;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         Ok(Some(self.parser.parse(input)?))
     }
 }

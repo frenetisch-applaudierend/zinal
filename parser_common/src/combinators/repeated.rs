@@ -8,13 +8,13 @@ impl<P> Repeated<P> {
     }
 }
 
-impl<'src, P> Parser<'src> for Repeated<P>
+impl<P> Parser for Repeated<P>
 where
-    P: Parser<'src>,
+    P: Parser,
 {
     type Output = Vec<P::Output>;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         let mut results = Vec::new();
 
         while !input.is_at_end() {
@@ -39,14 +39,14 @@ impl<P, T> RepeatedUntil<P, T> {
     }
 }
 
-impl<'src, P, T> Parser<'src> for RepeatedUntil<P, T>
+impl<P, T> Parser for RepeatedUntil<P, T>
 where
-    P: Parser<'src>,
-    T: Parser<'src>,
+    P: Parser,
+    T: Parser,
 {
     type Output = Vec<P::Output>;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         let mut results = Vec::new();
         let mut snapshot = input.position();
 

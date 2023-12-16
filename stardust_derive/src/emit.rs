@@ -87,6 +87,8 @@ impl ToTokens for Keyword {
             Keyword::Break => quote!(break),
             Keyword::Continue => quote!(continue),
             Keyword::Let => quote!(let),
+
+            Keyword::End => unreachable!(),
         };
         keyword.to_tokens(tokens);
     }

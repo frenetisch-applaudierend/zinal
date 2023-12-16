@@ -18,14 +18,14 @@ impl<P, F, T> Map<P, F, T> {
     }
 }
 
-impl<'src, P, F, T, U> Parser<'src> for Map<P, F, T>
+impl<P, F, T, U> Parser for Map<P, F, T>
 where
-    P: Parser<'src, Output = T>,
+    P: Parser<Output = T>,
     F: Fn(T) -> U,
 {
     type Output = U;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         match self.parser.parse(input)? {
             Some(orig) => Ok(Some((self.transform)(orig))),
             None => Ok(None),
@@ -44,14 +44,14 @@ impl<P, T> To<P, T> {
     }
 }
 
-impl<'src, P, T> Parser<'src> for To<P, T>
+impl<P, T> Parser for To<P, T>
 where
-    P: Parser<'src>,
+    P: Parser,
     T: Clone,
 {
     type Output = T;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         match self.parser.parse(input)? {
             Some(_) => Ok(Some(self.value.clone())),
             None => Ok(None),

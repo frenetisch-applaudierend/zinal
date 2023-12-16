@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use parser_common::{literal, select, take_until, whitespace, Input, Parser};
+use parser_common::{literal, select, take_until, whitespace, Boxed, Input, Parser};
 use proc_macro2::Span;
 
 use crate::parser::Keyword;
@@ -24,7 +24,7 @@ impl TemplateParser for HtmlParser {
     }
 }
 
-fn template_item<'src>() -> impl Parser<'src, Output = Item<'src>> {
+fn template_item<'src>() -> Boxed<'src, Item<'src>> {
     select((
         escape(),
         expression(),
@@ -32,6 +32,7 @@ fn template_item<'src>() -> impl Parser<'src, Output = Item<'src>> {
         // parse_child_template,
         // parse_literal,
     ))
+    .boxed()
 }
 
 fn escape<'src>() -> impl Parser<'src, Output = Item<'src>> {
@@ -105,9 +106,9 @@ fn statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
             keyword_tag(block_keywords)
                 .then(template_item().repeated_until(block_end()))
                 .then_ignore(end_tag().optional())
-                .map(|(s, body)| Item::KeywordStatement {
-                    keyword: s.keyword,
-                    statement: s.statement,
+                .map(|(tag, body)| Item::KeywordStatement {
+                    keyword: tag.keyword,
+                    statement: tag.statement,
                     body,
                 })
         }
@@ -147,7 +148,6 @@ fn statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
                     .map(|(k, s)| KeywordTag {
                         keyword: k,
                         statement: s,
-                        body: Vec::new(),
                     })
             }
         }
