@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use parser_common::{literal, select, take_until, todo, whitespace, Input, ParseResult, Parser};
+use parser_common::{literal, select, take_until, whitespace, Input, Parser};
 use proc_macro2::Span;
 
 use crate::parser::Keyword;
@@ -8,6 +8,11 @@ use crate::parser::Keyword;
 use super::{Item, TemplateParser};
 
 pub struct HtmlParser;
+
+struct KeywordTag<'src> {
+    keyword: Keyword,
+    statement: Option<Cow<'src, str>>,
+}
 
 impl TemplateParser for HtmlParser {
     fn parse<'src>(&mut self, mut input: Input<'src>) -> Result<Vec<Item<'src>>, syn::Error> {
@@ -61,7 +66,11 @@ fn statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
                 ))
             };
 
-            keyword_tag(simple_keywords)
+            keyword_tag(simple_keywords).map(|tag| Item::KeywordStatement {
+                keyword: tag.keyword,
+                statement: tag.statement,
+                body: Vec::new(),
+            })
         }
 
         fn block_keyword_statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
@@ -90,12 +99,20 @@ fn statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
                 ))
             };
 
-            let block_end = || keyword_tag(block_end_keywords());
+            let block_end = || keyword_tag(block_end_keywords);
+            let end_tag = || keyword_tag(|| literal("end").to(Keyword::End));
 
-            keyword_tag(block_keywords).then(template_item().repeated_until(block_end()))
+            keyword_tag(block_keywords)
+                .then(template_item().repeated_until(block_end()))
+                .then_ignore(end_tag().optional())
+                .map(|(s, body)| Item::KeywordStatement {
+                    keyword: s.keyword,
+                    statement: s.statement,
+                    body,
+                })
         }
 
-        fn keyword_tag<'src, F, K>(keyword: F) -> impl Parser<'src, Output = Item<'src>>
+        fn keyword_tag<'src, F, K>(keyword: F) -> impl Parser<'src, Output = KeywordTag<'src>>
         where
             F: Fn() -> K,
             K: Parser<'src, Output = Keyword>,
@@ -104,22 +121,21 @@ fn statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
 
             fn shorthand_tag<'src>(
                 keyword: impl Parser<'src, Output = Keyword>,
-            ) -> impl Parser<'src, Output = Item<'src>> {
+            ) -> impl Parser<'src, Output = KeywordTag<'src>> {
                 literal("<#")
                     .ignore_then(whitespace())
                     .ignore_then(keyword)
                     .then_ignore(whitespace())
                     .then_ignore(literal(">"))
-                    .map(|k| Item::KeywordStatement {
+                    .map(|k| KeywordTag {
                         keyword: k,
                         statement: None,
-                        body: Vec::new(),
                     })
             }
 
             fn longform_tag<'src>(
                 keyword: impl Parser<'src, Output = Keyword>,
-            ) -> impl Parser<'src, Output = Item<'src>> {
+            ) -> impl Parser<'src, Output = KeywordTag<'src>> {
                 let end = || whitespace().then(literal("#>"));
 
                 literal("<#")
@@ -128,7 +144,7 @@ fn statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
                     .then_ignore(whitespace().not_empty())
                     .then(take_until(end()).escape("##>", "#>").optional())
                     .then_ignore(end())
-                    .map(|(k, s)| Item::KeywordStatement {
+                    .map(|(k, s)| KeywordTag {
                         keyword: k,
                         statement: s,
                         body: Vec::new(),
@@ -150,129 +166,6 @@ fn statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
             .then_expect_ignore(end())
     }
 }
-
-// fn parse_keyword_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-//     let Some(start) = keyword_statement_tag(keyword()).parse(input)? else {
-//         return Ok(None);
-//     };
-
-//     let body = if start.keyword.requires_body() {
-//         body()
-//             .then_ignore(keyword_statement_tag(literal("end")).optional())
-//             .parse(input)?
-//             .ok_or(Error::new("Expected body after block statement"))?
-//     } else {
-//         vec![]
-//     };
-
-//     return Ok(Some(Item::KeywordStatement {
-//         keyword: start.keyword,
-//         statement: start.statement,
-//         body,
-//     }));
-
-//     #[derive(Debug, Clone)]
-//     struct KeywordStatementTag<'src, T> {
-//         keyword: T,
-//         statement: Option<Cow<'src, str>>,
-//     }
-
-//     fn keyword_statement_tag<'src, T: Clone>(
-//         keyword: impl Parser<'src, Output = T> + Clone,
-//     ) -> impl Parser<'src, Output = KeywordStatementTag<'src, T>> + Clone
-//     where
-//         T: Clone,
-//     {
-//         let statement = take_until(literal("#>")).escape("##>", "#>").map(Some);
-
-//         let longform = literal("<#")
-//             .ignore_then(whitespace().optional())
-//             .ignore_then(keyword.clone())
-//             .then_ignore(whitespace())
-//             .then(statement)
-//             .then_ignore(literal("#>"));
-
-//         let shortform = literal("<#")
-//             .ignore_then(whitespace().optional())
-//             .ignore_then(keyword)
-//             .then(insert(None))
-//             .then_ignore(whitespace().optional())
-//             .then_ignore(select((literal(">"), literal("#>"))));
-
-//         select((longform, shortform))
-//             .map(|(keyword, statement)| KeywordStatementTag { keyword, statement })
-//     }
-
-//     fn block_statement_end<'src>() -> impl Parser<'src, Output = ()> + Clone {
-//         let end_keyword = select((
-//             literal("end").map(|_| ()),
-//             keyword()
-//                 .filter(|k| *k == Keyword::Else || *k == Keyword::ElseIf)
-//                 .map(|_| ()),
-//         ));
-
-//         keyword_statement_tag(end_keyword).map(|_| ())
-//     }
-
-//     fn keyword<'src>() -> impl Parser<'src, Output = Keyword> + Clone {
-//         select((
-//             literal("if").map(|_| Keyword::If),
-//             literal("else")
-//                 .then(whitespace())
-//                 .then(literal("if"))
-//                 .map(|_| Keyword::ElseIf),
-//             literal("else").map(|_| Keyword::Else),
-//             literal("for").map(|_| Keyword::For),
-//             literal("while").map(|_| Keyword::While),
-//             literal("loop").map(|_| Keyword::Loop),
-//             literal("break").map(|_| Keyword::Break),
-//             literal("continue").map(|_| Keyword::Continue),
-//             literal("let").map(|_| Keyword::Let),
-//         ))
-//     }
-
-//     fn body<'src>() -> impl Parser<'src, Output = Vec<Item<'src>>> {
-//         |input: &mut Input<'src>| {
-//             let Some(body) = collect_until(parse_item, block_statement_end()).parse(input)? else {
-//                 return Err(Error::unexpected_eof());
-//             };
-
-//             Ok(Some(body))
-//         }
-//     }
-// }
-
-// fn parse_plain_statement<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-//     literal("<#")
-//         .ignore_then(whitespace().optional())
-//         .ignore_then(take_until("#>", "##>"))
-//         .then_ignore(literal("#>"))
-//         .map(Item::PlainStatement)
-//         .parse(input)
-// }
-
-// fn parse_child_template<'src>(_input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-//     return Ok(None);
-
-//     // fn name<'src>() -> impl Parser<'src, Output = Cow<'src, str>> {
-//     //     let separator = literal("::");
-//     //     let
-//     //     todo!()
-//     // }
-// }
-
-// fn parse_literal<'src>(input: &mut Input<'src>) -> ParseResult<Item<'src>> {
-//     // consume possible leading < or {
-//     let Some(lead) = input.consume_count(1) else {
-//         return Err(Error::unexpected_eof());
-//     };
-//     let rest = input
-//         .consume_until_any("<{")
-//         .unwrap_or_else(|| input.consume_all());
-//     let combined = input.combine(&[lead, rest]);
-
-//     Ok(Some(Item::Literal(combined.into_cow())))
-// }
 
 #[cfg(test)]
 mod tests;
