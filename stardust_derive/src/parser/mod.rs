@@ -80,6 +80,8 @@ impl Keyword {
             Keyword::Break => false,
             Keyword::Continue => false,
             Keyword::Let => false,
+
+            Keyword::End => unreachable!(),
         }
     }
 }

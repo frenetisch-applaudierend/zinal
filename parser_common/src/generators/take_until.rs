@@ -1,38 +1,39 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, marker::PhantomData};
 
 use crate::{Input, ParseResult, Parser};
 
-pub fn take_until<'src, T>(terminator: T) -> TakeUntil<T>
+pub fn take_until<'src, T, TO>(terminator: T) -> TakeUntil<T, TO>
 where
-    T: Parser,
+    T: Parser<TO>,
 {
     TakeUntil {
         terminator,
         escape: None,
+        _marker: PhantomData,
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct TakeUntil<T> {
+pub struct TakeUntil<T, TO> {
     terminator: T,
     escape: Option<(&'static str, &'static str)>,
+    _marker: PhantomData<TO>,
 }
 
-impl<T> TakeUntil<T> {
-    pub fn escape(self, escape: &'static str, replacement: &'static str) -> TakeUntil<T> {
+impl<T, TO> TakeUntil<T, TO> {
+    pub fn escape(self, escape: &'static str, replacement: &'static str) -> TakeUntil<T, TO> {
         Self {
             terminator: self.terminator,
             escape: Some((escape, replacement)),
+            _marker: PhantomData,
         }
     }
 }
 
-impl<T> Parser for TakeUntil<T>
+impl<T, TO> Parser<Cow<'_, str>> for TakeUntil<T, TO>
 where
-    T: Parser,
+    T: Parser<TO>,
 {
-    type Output = Cow<'src, str>;
-
     fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Cow<'src, str>> {
         let mut result = Cow::from("");
         let mut start = input.position();

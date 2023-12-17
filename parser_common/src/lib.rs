@@ -10,34 +10,32 @@ pub use generators::*;
 pub use input::*;
 pub use parsers::*;
 
-pub trait Parser {
-    type Output;
+pub trait Parser<O> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<O>;
 
-    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output>;
-
-    fn peek<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn peek<'src>(&self, input: &mut Input<'src>) -> ParseResult<O> {
         let position = input.position();
         let result = self.parse(input);
         input.reset_to(position);
         result
     }
 
-    fn boxed(self) -> Boxed<Self::Output>
+    fn boxed(self) -> Boxed<O>
     where
         Self: Sized + 'static,
     {
         Boxed::new(self)
     }
 
-    fn map<F, U>(self, transform: F) -> Map<Self, F, Self::Output>
+    fn map<F, U>(self, transform: F) -> Map<Self, F, O>
     where
         Self: Sized,
-        F: Fn(Self::Output) -> U,
+        F: Fn(O) -> U,
     {
         Map::new(self, transform)
     }
 
-    fn to<U: Clone>(self, value: U) -> To<Self, U>
+    fn to<U: Clone>(self, value: U) -> To<Self, O, U>
     where
         Self: Sized,
     {
@@ -47,7 +45,7 @@ pub trait Parser {
     fn filter<F>(self, filter: F) -> Filter<Self, F>
     where
         Self: Sized,
-        F: Fn(&Self::Output) -> bool,
+        F: Fn(&O) -> bool,
     {
         Filter::new(self, filter)
     }
@@ -59,34 +57,34 @@ pub trait Parser {
         Optional::new(self)
     }
 
-    fn then<P>(self, next: P) -> Then<Self, P>
+    fn then<P, PO>(self, next: P) -> Then<Self, P>
     where
         Self: Sized,
-        P: Parser,
+        P: Parser<PO>,
     {
         Then::new(self, false, next, false)
     }
 
-    fn ignore_then<P>(self, next: P) -> IgnoreThen<Self, P>
+    fn ignore_then<P, PO>(self, next: P) -> IgnoreThen<Self, P, O>
     where
         Self: Sized,
-        P: Parser,
+        P: Parser<PO>,
     {
         IgnoreThen::new(self, next)
     }
 
-    fn then_ignore<P>(self, next: P) -> ThenIgnore<Self, P>
+    fn then_ignore<P, PO>(self, next: P) -> ThenIgnore<Self, P, PO>
     where
         Self: Sized,
-        P: Parser,
+        P: Parser<PO>,
     {
         ThenIgnore::new(self, next, false)
     }
 
-    fn then_expect_ignore<P>(self, next: P) -> ThenIgnore<Self, P>
+    fn then_expect_ignore<P, PO>(self, next: P) -> ThenIgnore<Self, P, PO>
     where
         Self: Sized,
-        P: Parser,
+        P: Parser<PO>,
     {
         ThenIgnore::new(self, next, true)
     }
@@ -98,10 +96,10 @@ pub trait Parser {
         Repeated::new(self)
     }
 
-    fn repeated_until<T>(self, terminator: T) -> RepeatedUntil<Self, T>
+    fn repeated_until<T, TO>(self, terminator: T) -> RepeatedUntil<Self, T, TO>
     where
         Self: Sized,
-        T: Parser,
+        T: Parser<TO>,
     {
         RepeatedUntil::new(self, terminator)
     }

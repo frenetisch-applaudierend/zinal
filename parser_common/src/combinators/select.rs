@@ -1,4 +1,4 @@
-use crate::Parser;
+use crate::{ParseResult, Parser};
 
 pub fn select<P>(choices: P) -> Select<P> {
     Select(choices)
@@ -6,25 +6,21 @@ pub fn select<P>(choices: P) -> Select<P> {
 
 pub struct Select<T>(T);
 
-impl<P1> Parser for Select<(P1,)>
+impl<P1, O> Parser<O> for Select<(P1,)>
 where
-    P1: Parser,
+    P1: Parser<O>,
 {
-    type Output = P1::Output;
-
-    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> ParseResult<O> {
         self.0 .0.parse(input)
     }
 }
 
-impl<P1, P2> Parser for Select<(P1, P2)>
+impl<P1, P2, O> Parser<O> for Select<(P1, P2)>
 where
-    P1: Parser,
-    P2: Parser<Output = P1::Output>,
+    P1: Parser<O>,
+    P2: Parser<O>,
 {
-    type Output = P1::Output;
-
-    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> ParseResult<O> {
         if let Some(result) = self.0 .0.parse(input)? {
             return Ok(Some(result));
         }
@@ -37,15 +33,13 @@ where
     }
 }
 
-impl<P1, P2, P3> Parser for Select<(P1, P2, P3)>
+impl<P1, P2, P3, O> Parser<O> for Select<(P1, P2, P3)>
 where
-    P1: Parser,
-    P2: Parser<Output = P1::Output>,
-    P3: Parser<Output = P1::Output>,
+    P1: Parser<O>,
+    P2: Parser<O>,
+    P3: Parser<O>,
 {
-    type Output = P1::Output;
-
-    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> ParseResult<O> {
         if let Some(result) = self.0 .0.parse(input)? {
             return Ok(Some(result));
         }
@@ -62,16 +56,14 @@ where
     }
 }
 
-impl<P1, P2, P3, P4> Parser for Select<(P1, P2, P3, P4)>
+impl<P1, P2, P3, P4, O> Parser<O> for Select<(P1, P2, P3, P4)>
 where
-    P1: Parser,
-    P2: Parser<Output = P1::Output>,
-    P3: Parser<Output = P1::Output>,
-    P4: Parser<Output = P1::Output>,
+    P1: Parser<O>,
+    P2: Parser<O>,
+    P3: Parser<O>,
+    P4: Parser<O>,
 {
-    type Output = P1::Output;
-
-    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> ParseResult<O> {
         if let Some(result) = self.0 .0.parse(input)? {
             return Ok(Some(result));
         }
@@ -92,17 +84,15 @@ where
     }
 }
 
-impl<P1, P2, P3, P4, P5> Parser for Select<(P1, P2, P3, P4, P5)>
+impl<P1, P2, P3, P4, P5, O> Parser<O> for Select<(P1, P2, P3, P4, P5)>
 where
-    P1: Parser,
-    P2: Parser<Output = P1::Output>,
-    P3: Parser<Output = P1::Output>,
-    P4: Parser<Output = P1::Output>,
-    P5: Parser<Output = P1::Output>,
+    P1: Parser<O>,
+    P2: Parser<O>,
+    P3: Parser<O>,
+    P4: Parser<O>,
+    P5: Parser<O>,
 {
-    type Output = P1::Output;
-
-    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> ParseResult<O> {
         if let Some(result) = self.0 .0.parse(input)? {
             return Ok(Some(result));
         }
@@ -127,18 +117,16 @@ where
     }
 }
 
-impl<P1, P2, P3, P4, P5, P6> Parser for Select<(P1, P2, P3, P4, P5, P6)>
+impl<P1, P2, P3, P4, P5, P6, O> Parser<O> for Select<(P1, P2, P3, P4, P5, P6)>
 where
-    P1: Parser,
-    P2: Parser<Output = P1::Output>,
-    P3: Parser<Output = P1::Output>,
-    P4: Parser<Output = P1::Output>,
-    P5: Parser<Output = P1::Output>,
-    P6: Parser<Output = P1::Output>,
+    P1: Parser<O>,
+    P2: Parser<O>,
+    P3: Parser<O>,
+    P4: Parser<O>,
+    P5: Parser<O>,
+    P6: Parser<O>,
 {
-    type Output = P1::Output;
-
-    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> ParseResult<O> {
         if let Some(result) = self.0 .0.parse(input)? {
             return Ok(Some(result));
         }

@@ -12,14 +12,12 @@ impl<P, F> Filter<P, F> {
     }
 }
 
-impl<C, F> Parser for Filter<C, F>
+impl<C, F, O> Parser<O> for Filter<C, F>
 where
-    C: Parser,
-    F: (Fn(&C::Output) -> bool) + Clone,
+    C: Parser<O>,
+    F: (Fn(&O) -> bool) + Clone,
 {
-    type Output = C::Output;
-
-    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<O> {
         let Some(result) = self.parser.parse(input)? else {
             return Ok(None);
         };

@@ -1,32 +1,30 @@
+use std::marker::PhantomData;
+
 use crate::{Input, ParseResult, Parser};
 
-pub fn parser<'src, F, T>(func: F) -> impl Fn() -> FuncParser<F>
+pub fn parser<'src, F, O>(func: F) -> impl Fn() -> FuncParser<F, O>
 where
-    F: Fn(&mut Input<'src>) -> ParseResult<T> + Clone,
+    F: Fn(&mut Input<'src>) -> ParseResult<O> + Clone,
 {
-    move || FuncParser(func.clone())
+    move || FuncParser(func.clone(), PhantomData)
 }
 
-pub struct FuncParser<F>(F);
+pub struct FuncParser<F, O>(F, PhantomData<O>);
 
-impl<'src, F, T> Parser<'src> for FuncParser<F>
+impl<F, O> Parser<O> for FuncParser<F, O>
 where
-    F: Fn(&mut Input<'src>) -> ParseResult<T>,
+    for<'src> F: Fn(&mut Input<'src>) -> ParseResult<O>,
 {
-    type Output = T;
-
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<O> {
         self.0.parse(input)
     }
 }
 
-impl<'src, Func, T> Parser<'src> for Func
+impl<Func, O> Parser<O> for Func
 where
-    Func: Fn(&mut Input<'src>) -> ParseResult<T>,
+    for<'src> Func: Fn(&mut Input<'src>) -> ParseResult<O>,
 {
-    type Output = T;
-
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<O> {
         self(input)
     }
 }

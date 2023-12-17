@@ -1,21 +1,19 @@
 use crate::Parser;
 
-pub struct Boxed<T> {
-    inner: Box<dyn Parser<Output = T>>,
+pub struct Boxed<O> {
+    inner: Box<dyn Parser<O>>,
 }
 
-impl<'src, T> Boxed<T> {
-    pub fn new(parser: impl Parser<Output = T> + 'static) -> Self {
+impl<'src, O> Boxed<O> {
+    pub fn new(parser: impl Parser<O> + 'static) -> Self {
         Self {
             inner: Box::new(parser),
         }
     }
 }
 
-impl<T> Parser for Boxed<T> {
-    type Output = T;
-
-    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<Self::Output> {
+impl<O> Parser<O> for Boxed<O> {
+    fn parse<'src>(&self, input: &mut crate::Input<'src>) -> crate::ParseResult<O> {
         self.inner.parse(input)
     }
 }

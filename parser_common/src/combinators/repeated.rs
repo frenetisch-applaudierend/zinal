@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{Input, ParseResult, Parser};
 
 pub struct Repeated<P>(P);
@@ -8,13 +10,11 @@ impl<P> Repeated<P> {
     }
 }
 
-impl<P> Parser for Repeated<P>
+impl<P, O> Parser<Vec<O>> for Repeated<P>
 where
-    P: Parser,
+    P: Parser<O>,
 {
-    type Output = Vec<P::Output>;
-
-    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Vec<O>> {
         let mut results = Vec::new();
 
         while !input.is_at_end() {
@@ -28,25 +28,28 @@ where
     }
 }
 
-pub struct RepeatedUntil<P, T> {
+pub struct RepeatedUntil<P, T, TO> {
     parser: P,
     terminator: T,
+    _marker: PhantomData<TO>,
 }
 
-impl<P, T> RepeatedUntil<P, T> {
+impl<P, T, TO> RepeatedUntil<P, T, TO> {
     pub fn new(parser: P, terminator: T) -> Self {
-        Self { parser, terminator }
+        Self {
+            parser,
+            terminator,
+            _marker: PhantomData,
+        }
     }
 }
 
-impl<P, T> Parser for RepeatedUntil<P, T>
+impl<P, T, TO, O> Parser<Vec<O>> for RepeatedUntil<P, T, TO>
 where
-    P: Parser,
-    T: Parser,
+    P: Parser<O>,
+    T: Parser<TO>,
 {
-    type Output = Vec<P::Output>;
-
-    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Vec<O>> {
         let mut results = Vec::new();
         let mut snapshot = input.position();
 

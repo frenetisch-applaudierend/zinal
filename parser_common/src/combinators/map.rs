@@ -18,14 +18,12 @@ impl<P, F, T> Map<P, F, T> {
     }
 }
 
-impl<P, F, T, U> Parser for Map<P, F, T>
+impl<P, F, T, U> Parser<U> for Map<P, F, T>
 where
-    P: Parser<Output = T>,
+    P: Parser<T>,
     F: Fn(T) -> U,
 {
-    type Output = U;
-
-    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<U> {
         match self.parser.parse(input)? {
             Some(orig) => Ok(Some((self.transform)(orig))),
             None => Ok(None),
@@ -33,25 +31,28 @@ where
     }
 }
 
-pub struct To<P, T> {
+pub struct To<P, PO, T> {
     parser: P,
     value: T,
+    _marker: PhantomData<PO>,
 }
 
-impl<P, T> To<P, T> {
+impl<P: Parser<PO>, PO, T> To<P, PO, T> {
     pub fn new(parser: P, value: T) -> Self {
-        Self { parser, value }
+        Self {
+            parser,
+            value,
+            _marker: PhantomData,
+        }
     }
 }
 
-impl<P, T> Parser for To<P, T>
+impl<P, PO, T> Parser<T> for To<P, PO, T>
 where
-    P: Parser,
+    P: Parser<PO>,
     T: Clone,
 {
-    type Output = T;
-
-    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<T> {
         match self.parser.parse(input)? {
             Some(_) => Ok(Some(self.value.clone())),
             None => Ok(None),
