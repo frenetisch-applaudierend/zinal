@@ -4,7 +4,7 @@ use crate::{Input, ParseResult, Parser};
 
 pub fn take_until<'src, T>(terminator: T) -> TakeUntil<T>
 where
-    T: Parser<'src>,
+    T: Parser,
 {
     TakeUntil {
         terminator,
@@ -27,13 +27,13 @@ impl<T> TakeUntil<T> {
     }
 }
 
-impl<'src, T> Parser<'src> for TakeUntil<T>
+impl<T> Parser for TakeUntil<T>
 where
-    T: Parser<'src>,
+    T: Parser,
 {
     type Output = Cow<'src, str>;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Cow<'src, str>> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Cow<'src, str>> {
         let mut result = Cow::from("");
         let mut start = input.position();
 

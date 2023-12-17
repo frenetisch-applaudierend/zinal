@@ -14,10 +14,10 @@ impl Whitespace {
     }
 }
 
-impl<'src> Parser<'src> for Whitespace {
-    type Output = Offset<'src>;
+impl Parser for Whitespace {
+    type Output<'src> = Offset<'src>;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         let position = input.position();
         let consumed = input.consume_while(char::is_whitespace);
 

@@ -42,14 +42,14 @@ impl<P1, P2> ThenIgnore<P1, P2> {
     }
 }
 
-impl<'src, P1, P2> Parser<'src> for Then<P1, P2>
+impl<P1, P2> Parser for Then<P1, P2>
 where
-    P1: Parser<'src>,
-    P2: Parser<'src>,
+    P1: Parser,
+    P2: Parser,
 {
     type Output = (P1::Output, P2::Output);
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         let position = input.position();
 
         let Some(result1) = self.parser1.parse(input)? else {
@@ -72,26 +72,26 @@ where
     }
 }
 
-impl<'src, P1, P2> Parser<'src> for IgnoreThen<P1, P2>
+impl<P1, P2> Parser for IgnoreThen<P1, P2>
 where
-    P1: Parser<'src>,
-    P2: Parser<'src>,
+    P1: Parser,
+    P2: Parser,
 {
     type Output = P2::Output;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         Ok(self.then.parse(input)?.map(|(_, r)| r))
     }
 }
 
-impl<'src, P1, P2> Parser<'src> for ThenIgnore<P1, P2>
+impl<P1, P2> Parser for ThenIgnore<P1, P2>
 where
-    P1: Parser<'src>,
-    P2: Parser<'src>,
+    P1: Parser,
+    P2: Parser,
 {
     type Output = P1::Output;
 
-    fn parse(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
+    fn parse<'src>(&self, input: &mut Input<'src>) -> ParseResult<Self::Output> {
         Ok(self.then.parse(input)?.map(|(r, _)| r))
     }
 }
