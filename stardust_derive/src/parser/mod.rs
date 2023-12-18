@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use parser_common::Input;
 use proc_macro2::Span;
 
 mod html;

@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use parser_common::{literal, select, take_until, whitespace, Boxed, Input, Parser};
 use proc_macro2::Span;
 
 use crate::parser::Keyword;
@@ -8,6 +7,8 @@ use crate::parser::Keyword;
 use super::{Item, TemplateParser};
 
 pub struct HtmlParser;
+
+type ParseResult<'src> = Result<Option<Item<'src>>, syn::Error>;
 
 struct KeywordTag<'src> {
     keyword: Keyword,
