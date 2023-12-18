@@ -2,7 +2,10 @@ use std::borrow::Cow;
 
 use proc_macro2::Span;
 
+use self::input::Input;
+
 mod html;
+mod input;
 
 pub fn parse<'src>(source: &'src str, content_type: &str) -> Result<Vec<Item<'src>>, syn::Error> {
     let input = Input::new(source);

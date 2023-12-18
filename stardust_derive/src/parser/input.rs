@@ -172,6 +172,10 @@ impl<'src> Offset<'src> {
     pub fn into_cow(self) -> Cow<'src, str> {
         Cow::Borrowed(self.text)
     }
+
+    pub fn into_str(self) -> &'src str {
+        self.text
+    }
 }
 
 impl<'src> AsRef<str> for Offset<'src> {

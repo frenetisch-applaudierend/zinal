@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
-use parser_common::Input;
-
-use crate::parser::{Item, Keyword, TemplateArgument, TemplateArgumentValue, TemplateParser};
+use crate::parser::{
+    input::Input, Item, Keyword, TemplateArgument, TemplateArgumentValue, TemplateParser,
+};
 
 use super::HtmlParser;
 
