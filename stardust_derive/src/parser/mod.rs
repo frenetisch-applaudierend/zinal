@@ -60,7 +60,7 @@ pub enum Keyword {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TemplateArgument<'src> {
-    pub(crate) name: &'src str,
+    pub(crate) name: Cow<'src, str>,
     pub(crate) value: TemplateArgumentValue<'src>,
 }
 

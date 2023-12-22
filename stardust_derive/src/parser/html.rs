@@ -2,7 +2,11 @@ use std::borrow::Cow;
 
 use proc_macro2::Span;
 
-use crate::parser::{common::select2, Keyword};
+use crate::parser::{
+    common::{parse_rust_identifier, select2},
+    input::Offset,
+    Keyword, TemplateArgument, TemplateArgumentValue,
+};
 
 use super::{
     common::{parse_rust_typename, select5, ParseResult},
@@ -244,12 +248,210 @@ fn parse_child_template<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
         return Ok(None);
     }
 
-    let Some(_typename) = parse_rust_typename(input) else {
+    input.consume_while(char::is_whitespace);
+
+    let Some(name) = parse_rust_typename(input).map(Offset::into_cow) else {
         input.reset_to(position);
         return Ok(None);
     };
 
-    Ok(None)
+    if !name.contains("::") && !name.contains(char::is_uppercase) {
+        input.reset_to(position);
+        return Ok(None);
+    }
+
+    let mut arguments = Vec::new();
+    loop {
+        let whitespace = input.consume_while(char::is_whitespace);
+        if whitespace.is_empty() {
+            break;
+        }
+
+        let Some(argument) = parse_template_argument(input)? else {
+            break;
+        };
+
+        arguments.push(argument);
+    }
+
+    input.consume_while(char::is_whitespace);
+
+    let children = if input.consume_lit("/>").is_some() {
+        // Collapsed tag
+        Vec::new()
+    } else if input.consume_lit(">").is_some() {
+        // Regular tag with body - parse_template_children also parses the end tag
+        parse_template_children(input, name.as_ref())?
+    } else {
+        return Err(syn::Error::new(
+            Span::call_site(),
+            "Unterminated template reference",
+        ));
+    };
+
+    return Ok(Some(Item::ChildTemplate {
+        name,
+        arguments,
+        children,
+    }));
+
+    fn parse_template_argument<'src>(
+        input: &mut Input<'src>,
+    ) -> Result<Option<TemplateArgument<'src>>, syn::Error> {
+        let Some(name) = parse_rust_identifier(input).map(Offset::into_cow) else {
+            return Ok(None);
+        };
+
+        input.consume_while(char::is_whitespace);
+        if input.consume_lit("=").is_none() {
+            return Err(syn::Error::new(
+                Span::call_site(),
+                "Unexpected token in template argument",
+            ));
+        }
+        input.consume_while(char::is_whitespace);
+
+        let value = parse_template_argument_value(input)?;
+
+        return Ok(Some(TemplateArgument { name, value }));
+
+        fn parse_template_argument_value<'src>(
+            input: &mut Input<'src>,
+        ) -> Result<TemplateArgumentValue<'src>, syn::Error> {
+            if let Some(value) = parse_expression_value(input)? {
+                return Ok(value);
+            }
+
+            if let Some(value) = parse_double_ticks_value(input)? {
+                return Ok(value);
+            }
+
+            if let Some(value) = parse_single_ticks_value(input)? {
+                return Ok(value);
+            }
+
+            return Err(syn::Error::new(
+                Span::call_site(),
+                "Unexpected token for template argument value",
+            ));
+
+            fn parse_expression_value<'src>(
+                input: &mut Input<'src>,
+            ) -> Result<Option<TemplateArgumentValue<'src>>, syn::Error> {
+                let Some(Item::Expression(expr)) = parse_expression(input)? else {
+                    return Ok(None);
+                };
+
+                Ok(Some(TemplateArgumentValue::Expression(expr)))
+            }
+
+            fn parse_double_ticks_value<'src>(
+                input: &mut Input<'src>,
+            ) -> Result<Option<TemplateArgumentValue<'src>>, syn::Error> {
+                if input.consume_lit("\"").is_none() {
+                    return Ok(None);
+                }
+
+                let mut content = Cow::<'src, str>::Borrowed("");
+
+                loop {
+                    let part = input.consume_until_any("\\\"");
+
+                    append(&mut content, part.into_str());
+
+                    if input.consume_lit("\\\"").is_some() {
+                        append(&mut content, "\"");
+                    } else if input.consume_lit("\"").is_some() {
+                        break;
+                    } else {
+                        return Err(syn::Error::new(
+                            Span::call_site(),
+                            "Unterminated string literal",
+                        ));
+                    }
+                }
+
+                Ok(Some(TemplateArgumentValue::Literal(content)))
+            }
+
+            fn parse_single_ticks_value<'src>(
+                input: &mut Input<'src>,
+            ) -> Result<Option<TemplateArgumentValue<'src>>, syn::Error> {
+                if input.consume_lit("'").is_none() {
+                    return Ok(None);
+                }
+
+                let mut content = Cow::<'src, str>::Borrowed("");
+
+                loop {
+                    let part = input.consume_until_any("\\'");
+
+                    append(&mut content, part.into_str());
+
+                    if input.consume_lit("\\'").is_some() {
+                        append(&mut content, "'");
+                    } else if input.consume_lit("'").is_some() {
+                        break;
+                    } else {
+                        return Err(syn::Error::new(
+                            Span::call_site(),
+                            "Unterminated string literal",
+                        ));
+                    }
+                }
+
+                Ok(Some(TemplateArgumentValue::Literal(content)))
+            }
+        }
+    }
+
+    fn parse_template_children<'src>(
+        input: &mut Input<'src>,
+        name: &str,
+    ) -> Result<Vec<Item<'src>>, syn::Error> {
+        let mut children = Vec::new();
+
+        while !input.is_at_end() {
+            if parse_end_tag(input, name)? {
+                return Ok(children);
+            }
+
+            let Some(item) = parse_template_item(input)? else {
+                break;
+            };
+
+            children.push(item);
+        }
+
+        return Err(syn::Error::new(
+            Span::call_site(),
+            "Unterminated template reference",
+        ));
+
+        fn parse_end_tag<'src>(input: &mut Input<'src>, name: &str) -> Result<bool, syn::Error> {
+            let position = input.position();
+
+            if input.consume_lit("</").is_none() {
+                return Ok(false);
+            }
+
+            input.consume_while(char::is_whitespace);
+
+            if input.consume_lit(name).is_none() {
+                input.reset_to(position);
+                return Ok(false);
+            }
+
+            input.consume_while(char::is_whitespace);
+
+            if input.consume_lit(">").is_none() {
+                input.reset_to(position);
+                return Ok(false);
+            }
+
+            Ok(true)
+        }
+    }
 }
 
 fn parse_literal<'src>(input: &mut Input<'src>) -> ParseResult<'src> {

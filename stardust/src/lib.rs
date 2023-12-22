@@ -19,6 +19,28 @@ pub trait Template: Renderable {
     }
 }
 
+pub struct FuncRenderable<F>(F)
+where
+    F: Fn(&mut dyn Write) -> Result<(), Error>;
+
+impl<F> FuncRenderable<F>
+where
+    F: Fn(&mut dyn Write) -> Result<(), Error>,
+{
+    pub fn new(func: F) -> Self {
+        Self(func)
+    }
+}
+
+impl<F> Renderable for FuncRenderable<F>
+where
+    F: Fn(&mut dyn Write) -> Result<(), Error>,
+{
+    fn render_to(&self, writer: &mut dyn Write) -> Result<(), Error> {
+        (self.0)(writer)
+    }
+}
+
 impl<T> Renderable for T
 where
     T: Display,

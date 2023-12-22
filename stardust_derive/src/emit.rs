@@ -55,13 +55,25 @@ impl Emit for Item<'_> {
             Item::ChildTemplate {
                 name,
                 arguments,
-                children: _,
+                children,
             } => {
                 let ty = syn::parse_str::<syn::TypePath>(name.as_ref())?;
-                let arguments = arguments
+                let mut arguments = arguments
                     .into_iter()
                     .map(Emit::emit)
                     .collect::<Result<Vec<_>, _>>()?;
+
+                if !children.is_empty() {
+                    let children = Item::emit_all(children)?;
+                    let tokens = quote! {
+                        children: &::stardust::FuncRenderable::new(|w: &mut dyn ::core::fmt::Write| {
+                            #(#children)*
+
+                            Ok(())
+                        })
+                    };
+                    arguments.push(tokens);
+                }
 
                 let template = quote! {
                     #ty { #(#arguments),* }
@@ -96,7 +108,7 @@ impl ToTokens for Keyword {
 
 impl Emit for TemplateArgument<'_> {
     fn emit(self) -> Result<TokenStream, Error> {
-        let name = syn::parse_str::<syn::Ident>(self.name)?;
+        let name = syn::parse_str::<syn::Ident>(self.name.as_ref())?;
         let value = self.value.emit()?;
 
         Ok(quote! {
@@ -229,11 +241,11 @@ mod tests {
             name: Cow::from("::module::Type"),
             arguments: vec![
                 TemplateArgument {
-                    name: "expr",
+                    name: Cow::from("expr"),
                     value: TemplateArgumentValue::Expression(Cow::from("self.name")),
                 },
                 TemplateArgument {
-                    name: "lit",
+                    name: Cow::from("lit"),
                     value: TemplateArgumentValue::Literal(Cow::from("Literal")),
                 },
             ],

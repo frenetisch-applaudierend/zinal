@@ -7,6 +7,6 @@
 <#end>
 
 <p>Children:</p>
-<#for child in self.children #>
-  <Child item={child} />
+<#for child in &self.children #>
+  <Child name={child.as_str()} />
 <#end>

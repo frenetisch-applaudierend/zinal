@@ -233,34 +233,71 @@ fn block_statement_if() {
 }
 
 #[test]
-fn child_template() {
+fn child_template_minimal() {
+    let mut parser = HtmlParser;
+
+    let input = Input::new("<::foo::Bar />");
+
+    let result = parser.parse(input).expect("Should have parsed");
+
+    assert_eq!(
+        result,
+        vec![Item::ChildTemplate {
+            name: Cow::from("::foo::Bar"),
+            arguments: vec![],
+            children: vec![]
+        }]
+    );
+}
+
+#[test]
+fn child_template_with_args() {
     let mut parser = HtmlParser;
 
     let input = Input::new(
         "<Child expr={self.name} lit_double=\"test double\" lit_single='test single' />",
     );
-    let result = parser.parse(input);
+    let result = parser.parse(input).expect("Should have parsed");
 
-    assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
     assert_eq!(
-        result.unwrap(),
+        result,
         vec![Item::ChildTemplate {
             name: Cow::from("Child"),
             arguments: vec![
                 TemplateArgument {
-                    name: "expr",
+                    name: Cow::from("expr"),
                     value: TemplateArgumentValue::Expression(Cow::from("self.name"))
                 },
                 TemplateArgument {
-                    name: "lit_double",
+                    name: Cow::from("lit_double"),
                     value: TemplateArgumentValue::Literal(Cow::from("test double"))
                 },
                 TemplateArgument {
-                    name: "lit_single",
-                    value: TemplateArgumentValue::Expression(Cow::from("test single"))
+                    name: Cow::from("lit_single"),
+                    value: TemplateArgumentValue::Literal(Cow::from("test single"))
                 }
             ],
             children: vec![]
+        }]
+    );
+}
+
+#[test]
+fn child_template_with_args_and_body() {
+    let mut parser = HtmlParser;
+
+    let input = Input::new("<Child expr={self.name}>Hello, World!</Child>");
+    let result = parser.parse(input).expect("Should have parsed");
+
+    assert_eq!(
+        result,
+        vec![Item::ChildTemplate {
+            name: Cow::from("Child"),
+            arguments: vec![TemplateArgument {
+                name: Cow::from("expr"),
+                value: TemplateArgumentValue::Expression(Cow::from("self.name"))
+            },],
+            children: vec![Item::Literal(Cow::from("Hello, World!"))]
         }]
     );
 }
