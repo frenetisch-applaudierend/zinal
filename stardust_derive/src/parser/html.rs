@@ -5,7 +5,7 @@ use proc_macro2::Span;
 use crate::parser::{common::select2, Keyword};
 
 use super::{
-    common::{select5, ParseResult},
+    common::{parse_rust_typename, select5, ParseResult},
     input::Input,
     Item, TemplateParser,
 };
@@ -239,6 +239,15 @@ fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
 
 fn parse_child_template<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
     let position = input.position();
+
+    if input.consume_lit("<").is_none() {
+        return Ok(None);
+    }
+
+    let Some(typename) = parse_rust_typename(input) else {
+        input.reset_to(position);
+        return Ok(None);
+    };
 
     Ok(None)
 }
