@@ -14,7 +14,7 @@ pub fn select2<'src>(
         return Ok(Some(result));
     }
 
-    return p2(input);
+    p2(input)
 }
 
 pub fn select3<'src>(

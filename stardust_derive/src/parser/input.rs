@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    ops::{Bound, RangeBounds},
+    ops::{RangeBounds},
 };
 
 pub struct Input<'src> {

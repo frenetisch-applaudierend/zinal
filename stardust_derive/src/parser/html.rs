@@ -20,7 +20,7 @@ impl TemplateParser for HtmlParser {
             items.push(parse_template_item(&mut input)?.expect("Should never be None"));
         }
 
-        return Ok(items);
+        Ok(items)
     }
 }
 
@@ -50,7 +50,7 @@ fn parse_escape<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
 }
 
 fn parse_expression<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
-    if !input.consume_lit("{").is_some() {
+    if input.consume_lit("{").is_none() {
         return Ok(None);
     }
 
@@ -82,7 +82,7 @@ fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
     fn parse_keyword_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
         let position = input.position();
 
-        if !input.consume_lit("<#").is_some() {
+        if input.consume_lit("<#").is_none() {
             return Ok(None);
         }
 
@@ -126,7 +126,7 @@ fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
             body,
         }));
 
-        fn parse_keyword<'src>(input: &mut Input<'src>) -> Option<Keyword> {
+        fn parse_keyword(input: &mut Input<'_>) -> Option<Keyword> {
             if input.consume_lit("if").is_some() {
                 return Some(Keyword::If);
             }
@@ -203,7 +203,7 @@ fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
     }
 
     fn parse_plain_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
-        if !input.consume_lit("<#").is_some() {
+        if input.consume_lit("<#").is_none() {
             return Ok(None);
         }
 
@@ -244,7 +244,7 @@ fn parse_child_template<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
         return Ok(None);
     }
 
-    let Some(typename) = parse_rust_typename(input) else {
+    let Some(_typename) = parse_rust_typename(input) else {
         input.reset_to(position);
         return Ok(None);
     };
@@ -272,7 +272,7 @@ fn append<'src>(content: &mut Cow<'src, str>, part: &'src str) {
     }
 }
 
-fn trim<'src>(content: Cow<'src, str>) -> Cow<'src, str> {
+fn trim(content: Cow<'_, str>) -> Cow<'_, str> {
     match content {
         Cow::Borrowed(value) => Cow::Borrowed(value.trim()),
         Cow::Owned(value) => Cow::Owned(value.trim().to_owned()),
