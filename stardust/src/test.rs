@@ -1,6 +1,6 @@
 use std::fmt::{Error, Write};
 
-use crate::{Renderable, Template};
+use crate::{Escaper, NoopEscaper, Renderable, Template};
 
 #[test]
 fn hello_world() {
@@ -9,9 +9,9 @@ fn hello_world() {
     }
 
     impl Renderable for HelloWorld<'_> {
-        fn render_to(&self, writer: &mut dyn Write) -> Result<(), Error> {
+        fn render_to(&self, writer: &mut dyn Write, escaper: &dyn Escaper) -> Result<(), Error> {
             write!(writer, "Hello, ")?;
-            self.name.render_to(writer)?;
+            self.name.render_to(writer, escaper)?;
 
             Ok(())
         }
@@ -22,7 +22,10 @@ fn hello_world() {
     let name = "World!";
     let hello = HelloWorld { name: &name };
 
-    assert_eq!(hello.render_to_string(), Ok("Hello, World!".to_string()));
+    assert_eq!(
+        hello.render_to_string(&NoopEscaper),
+        Ok("Hello, World!".to_string())
+    );
 }
 
 #[test]
@@ -45,7 +48,7 @@ fn target_example() {
 
     impl Template for Info {}
     impl Renderable for Info {
-        fn render_to(&self, writer: &mut dyn Write) -> Result<(), Error> {
+        fn render_to(&self, writer: &mut dyn Write, escaper: &dyn Escaper) -> Result<(), Error> {
             write!(writer, "<div>")?;
 
             {
@@ -54,7 +57,7 @@ fn target_example() {
                     age: 35,
                     children: &"<p>Lorem ipsum...</p>",
                 };
-                __child.render_to(writer)?;
+                __child.render_to(writer, escaper)?;
             }
 
             write!(writer, "</div>")?;
@@ -65,25 +68,25 @@ fn target_example() {
 
     impl Template for Person<'_> {}
     impl Renderable for Person<'_> {
-        fn render_to(&self, writer: &mut dyn Write) -> Result<(), Error> {
+        fn render_to(&self, writer: &mut dyn Write, escaper: &dyn Escaper) -> Result<(), Error> {
             write!(writer, "<p>Name: ")?;
 
-            self.name.render_to(writer)?;
+            self.name.render_to(writer, escaper)?;
 
             write!(writer, "</p><p>Age: ")?;
 
-            self.age.render_to(writer)?;
+            self.age.render_to(writer, escaper)?;
 
             write!(writer, "</p>")?;
 
-            self.children.render_to(writer)?;
+            self.children.render_to(writer, escaper)?;
 
             Ok(())
         }
     }
 
     assert_eq!(
-        Info.render_to_string(),
+        Info.render_to_string(&NoopEscaper),
         Ok("<div><p>Name: Fred</p><p>Age: 35</p><p>Lorem ipsum...</p></div>".to_string())
     );
 }
