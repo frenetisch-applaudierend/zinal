@@ -4,6 +4,7 @@ use proc_macro2::Span;
 
 use self::input::Input;
 
+mod common;
 mod html;
 mod input;
 

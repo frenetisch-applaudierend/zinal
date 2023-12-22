@@ -2,13 +2,15 @@ use std::borrow::Cow;
 
 use proc_macro2::Span;
 
-use crate::parser::Keyword;
+use crate::parser::{common::select2, Keyword};
 
-use super::{input::Input, Item, TemplateParser};
+use super::{
+    common::{select5, ParseResult},
+    input::Input,
+    Item, TemplateParser,
+};
 
 pub struct HtmlParser;
-
-type ParseResult<'src> = Result<Option<Item<'src>>, syn::Error>;
 
 impl TemplateParser for HtmlParser {
     fn parse<'src>(&mut self, mut input: Input<'src>) -> Result<Vec<Item<'src>>, syn::Error> {
@@ -236,6 +238,8 @@ fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
 }
 
 fn parse_child_template<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
+    let position = input.position();
+
     Ok(None)
 }
 
@@ -264,72 +268,6 @@ fn trim<'src>(content: Cow<'src, str>) -> Cow<'src, str> {
         Cow::Borrowed(value) => Cow::Borrowed(value.trim()),
         Cow::Owned(value) => Cow::Owned(value.trim().to_owned()),
     }
-}
-
-fn select2<'src>(
-    input: &mut Input<'src>,
-    parsers: (
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-    ),
-) -> ParseResult<'src> {
-    let (p1, p2) = parsers;
-    if let Some(result) = p1(input)? {
-        return Ok(Some(result));
-    }
-
-    return p2(input);
-}
-
-fn select3<'src>(
-    input: &mut Input<'src>,
-    parsers: (
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-    ),
-) -> ParseResult<'src> {
-    let (p1, p2, p3) = parsers;
-    if let Some(result) = p1(input)? {
-        return Ok(Some(result));
-    }
-
-    return select2(input, (p2, p3));
-}
-
-fn select4<'src>(
-    input: &mut Input<'src>,
-    parsers: (
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-    ),
-) -> ParseResult<'src> {
-    let (p1, p2, p3, p4) = parsers;
-    if let Some(result) = p1(input)? {
-        return Ok(Some(result));
-    }
-
-    return select3(input, (p2, p3, p4));
-}
-
-fn select5<'src>(
-    input: &mut Input<'src>,
-    parsers: (
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
-    ),
-) -> ParseResult<'src> {
-    let (p1, p2, p3, p4, p5) = parsers;
-    if let Some(result) = p1(input)? {
-        return Ok(Some(result));
-    }
-
-    return select4(input, (p2, p3, p4, p5));
 }
 
 #[cfg(test)]

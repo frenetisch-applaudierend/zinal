@@ -35,15 +35,6 @@ impl<'src> Input<'src> {
         Position(self.offset)
     }
 
-    pub fn advance(&mut self) -> bool {
-        if let Some(c) = self.remainder.chars().nth(0) {
-            self.consume(c.len_utf8());
-            true
-        } else {
-            false
-        }
-    }
-
     pub fn reset_to(&mut self, position: Position) {
         self.offset = position.0;
         self.remainder = &self.source[self.offset..];
@@ -118,22 +109,6 @@ impl<'src> Input<'src> {
         self.remainder = "";
 
         Offset::new(consumed, offset)
-    }
-
-    pub fn peek_range(&self, range: impl RangeBounds<Position>) -> Offset<'src> {
-        let start = match range.start_bound() {
-            Bound::Included(v) => v.0,
-            Bound::Excluded(v) => v.0 + 1,
-            Bound::Unbounded => 0,
-        };
-
-        let end = match range.end_bound() {
-            Bound::Included(v) => v.0 - 1,
-            Bound::Excluded(v) => v.0,
-            Bound::Unbounded => self.source.len(),
-        };
-
-        Offset::new(&self.source[start..end], start)
     }
 
     pub fn combine(&self, values: &[Offset<'src>]) -> Offset<'src> {
