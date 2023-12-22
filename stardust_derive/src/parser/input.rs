@@ -70,27 +70,29 @@ impl<'src> Input<'src> {
         self.consume(len)
     }
 
-    pub fn consume_until(&mut self, sentinel: &str) -> Option<Offset<'src>> {
-        let index = self.remainder.find(sentinel)?;
+    pub fn consume_until(&mut self, sentinel: &str) -> Offset<'src> {
+        let Some(index) = self.remainder.find(sentinel) else {
+            return self.consume_all();
+        };
 
-        Some(self.consume(index))
+        self.consume(index)
     }
 
-    pub fn consume_until_any(&mut self, sentinels: &str) -> Option<Offset<'src>> {
+    pub fn consume_until_any(&mut self, sentinels: &str) -> Offset<'src> {
         if self.is_at_end() {
-            return None;
+            return Offset::new("", self.offset);
         }
 
         let mut len = 0;
         for c in self.remainder.chars() {
             if sentinels.contains(c) {
-                return Some(self.consume(len));
+                break;
             }
 
             len += c.len_utf8();
         }
 
-        None
+        self.consume(len)
     }
 
     pub fn consume_count(&mut self, count: usize) -> Option<Offset<'src>> {
