@@ -8,7 +8,7 @@ use super::{input::Input, Item, TemplateParser};
 
 pub struct HtmlParser;
 
-type ParseResult<'src, T = Item<'src>> = Result<Option<T>, syn::Error>;
+type ParseResult<'src> = Result<Option<Item<'src>>, syn::Error>;
 
 struct KeywordTag<'src> {
     keyword: Keyword,
@@ -74,7 +74,103 @@ fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
     return select2(input, (parse_keyword_statement, parse_plain_statement));
 
     fn parse_keyword_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
-        Ok(None)
+        let position = input.position();
+
+        if !input.consume_lit("<#").is_some() {
+            return Ok(None);
+        }
+
+        input.consume_while(char::is_whitespace);
+
+        let Some(keyword) = parse_keyword(input) else {
+            input.reset_to(position);
+            return Ok(None);
+        };
+
+        let whitespace = input.consume_while(char::is_whitespace);
+
+        let statement = if input
+            .consume_lit(">")
+            .or_else(|| input.consume_lit("#>"))
+            .is_some()
+        {
+            // Shorthand form
+            None
+        } else {
+            // Long form
+
+            if whitespace.len() < 1 {
+                // In long form at least one whitespace is needed to separate
+                // the keyword from the statement content
+                input.reset_to(position);
+                return Ok(None);
+            }
+            Some(parse_statement_content(input)?)
+        };
+
+        let body = if keyword.has_body() {
+            parse_body(input)?
+        } else {
+            Vec::new()
+        };
+
+        return Ok(Some(Item::KeywordStatement {
+            keyword,
+            statement,
+            body,
+        }));
+
+        fn parse_keyword<'src>(input: &mut Input<'src>) -> Option<Keyword> {
+            if input.consume_lit("if").is_some() {
+                return Some(Keyword::If);
+            }
+
+            if input.consume_lit("else").is_some() {
+                let position = input.position();
+                input.consume_while(char::is_whitespace);
+
+                if input.consume_lit("if").is_some() {
+                    return Some(Keyword::ElseIf);
+                } else {
+                    input.reset_to(position);
+                    return Some(Keyword::Else);
+                }
+            }
+
+            if input.consume_lit("for").is_some() {
+                return Some(Keyword::For);
+            }
+
+            if input.consume_lit("while").is_some() {
+                return Some(Keyword::While);
+            }
+
+            if input.consume_lit("loop").is_some() {
+                return Some(Keyword::Loop);
+            }
+
+            if input.consume_lit("end").is_some() {
+                return Some(Keyword::End);
+            }
+
+            if input.consume_lit("break").is_some() {
+                return Some(Keyword::Break);
+            }
+
+            if input.consume_lit("continue").is_some() {
+                return Some(Keyword::Continue);
+            }
+
+            if input.consume_lit("let").is_some() {
+                return Some(Keyword::Let);
+            }
+
+            None
+        }
+
+        fn parse_body<'src>(input: &mut Input<'src>) -> Result<Vec<Item<'src>>, syn::Error> {
+            Ok(Vec::new())
+        }
     }
 
     fn parse_plain_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
@@ -82,11 +178,17 @@ fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
             return Ok(None);
         }
 
+        let content = parse_statement_content(input)?;
+
+        Ok(Some(Item::PlainStatement(content)))
+    }
+
+    fn parse_statement_content<'src>(
+        input: &mut Input<'src>,
+    ) -> Result<Cow<'src, str>, syn::Error> {
         let mut content = Cow::<'src, str>::Borrowed("");
 
         loop {
-            println!("Currently at offset {:?}", input.position());
-
             let Some(part) = input.consume_until("#") else {
                 return Err(syn::Error::new(Span::call_site(), "Unterminated statement"));
             };
@@ -103,7 +205,7 @@ fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
             }
         }
 
-        Ok(Some(Item::PlainStatement(trim(content))))
+        Ok(trim(content))
     }
 
     // return select((keyword_statement(), plain_statement()));

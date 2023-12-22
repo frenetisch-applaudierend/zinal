@@ -70,7 +70,7 @@ pub enum TemplateArgumentValue<'src> {
 }
 
 impl Keyword {
-    pub fn requires_body(self) -> bool {
+    pub fn has_body(self) -> bool {
         match self {
             Keyword::If => true,
             Keyword::Else => true,
