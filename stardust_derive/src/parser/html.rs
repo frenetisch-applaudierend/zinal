@@ -8,7 +8,7 @@ use super::{input::Input, Item, TemplateParser};
 
 pub struct HtmlParser;
 
-type ParseResult<'src> = Result<Option<Item<'src>>, syn::Error>;
+type ParseResult<'src, T = Item<'src>> = Result<Option<T>, syn::Error>;
 
 struct KeywordTag<'src> {
     keyword: Keyword,
@@ -71,7 +71,41 @@ fn parse_expression<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
 }
 
 fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
-    Ok(None)
+    return select2(input, (parse_keyword_statement, parse_plain_statement));
+
+    fn parse_keyword_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
+        Ok(None)
+    }
+
+    fn parse_plain_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
+        if !input.consume_lit("<#").is_some() {
+            return Ok(None);
+        }
+
+        let mut content = Cow::<'src, str>::Borrowed("");
+
+        loop {
+            println!("Currently at offset {:?}", input.position());
+
+            let Some(part) = input.consume_until("#") else {
+                return Err(syn::Error::new(Span::call_site(), "Unterminated statement"));
+            };
+
+            append(&mut content, part.into_str());
+
+            if input.consume_lit("##>").is_some() {
+                append(&mut content, "#>");
+            } else if input.consume_lit("#>").is_some() {
+                break;
+            } else {
+                input.consume_lit("#").expect("Implied by consume_until");
+                append(&mut content, "#");
+            }
+        }
+
+        Ok(Some(Item::PlainStatement(trim(content))))
+    }
+
     // return select((keyword_statement(), plain_statement()));
 
     // fn keyword_statement<'src>() -> impl Parser<'src, Output = Item<'src>> {
