@@ -10,11 +10,6 @@ pub struct HtmlParser;
 
 type ParseResult<'src> = Result<Option<Item<'src>>, syn::Error>;
 
-struct KeywordTag<'src> {
-    keyword: Keyword,
-    statement: Option<Cow<'src, str>>,
-}
-
 impl TemplateParser for HtmlParser {
     fn parse<'src>(&mut self, mut input: Input<'src>) -> Result<Vec<Item<'src>>, syn::Error> {
         let mut items = Vec::new();
