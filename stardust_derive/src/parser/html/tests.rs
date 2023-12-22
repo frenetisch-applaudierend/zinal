@@ -192,7 +192,7 @@ fn block_statement_for() {
         result.unwrap(),
         vec![Item::KeywordStatement {
             keyword: Keyword::For,
-            statement: Some(Cow::from("name in self.names ")),
+            statement: Some(Cow::from("name in self.names")),
             body: vec![
                 Item::Literal(Cow::from("Hello, ")),
                 Item::Expression(Cow::from("name"))
@@ -215,12 +215,12 @@ fn block_statement_if() {
         vec![
             Item::KeywordStatement {
                 keyword: Keyword::If,
-                statement: Some(Cow::from("age > 18 ")),
+                statement: Some(Cow::from("age > 18")),
                 body: vec![Item::Literal(Cow::from("Over 18")),]
             },
             Item::KeywordStatement {
                 keyword: Keyword::ElseIf,
-                statement: Some(Cow::from("age < 18 ")),
+                statement: Some(Cow::from("age < 18")),
                 body: vec![Item::Literal(Cow::from("Under 18")),]
             },
             Item::KeywordStatement {

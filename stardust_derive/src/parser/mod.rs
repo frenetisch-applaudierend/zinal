@@ -72,18 +72,22 @@ pub enum TemplateArgumentValue<'src> {
 impl Keyword {
     pub fn has_body(self) -> bool {
         match self {
-            Keyword::If => true,
-            Keyword::Else => true,
-            Keyword::ElseIf => true,
-            Keyword::For => true,
-            Keyword::While => true,
-            Keyword::Loop => true,
+            Keyword::If
+            | Keyword::Else
+            | Keyword::ElseIf
+            | Keyword::For
+            | Keyword::While
+            | Keyword::Loop => true,
 
-            Keyword::Break => false,
-            Keyword::Continue => false,
-            Keyword::Let => false,
+            _ => false,
+        }
+    }
 
-            Keyword::End => unreachable!(),
+    pub fn is_block_terminator(self) -> bool {
+        match self {
+            Keyword::Else | Keyword::ElseIf | Keyword::End => true,
+
+            _ => false,
         }
     }
 }

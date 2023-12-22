@@ -178,7 +178,30 @@ fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
         }
 
         fn parse_body<'src>(input: &mut Input<'src>) -> Result<Vec<Item<'src>>, syn::Error> {
-            Ok(Vec::new())
+            let mut body = Vec::new();
+
+            while !input.is_at_end() {
+                let position = input.position();
+
+                let item = parse_template_item(input)?
+                    .expect("parse_template_item should never return None");
+
+                match item {
+                    Item::KeywordStatement {
+                        keyword,
+                        statement: _,
+                        body: _,
+                    } if keyword.is_block_terminator() => {
+                        if keyword != Keyword::End {
+                            input.reset_to(position);
+                        }
+                        break;
+                    }
+                    _ => body.push(item),
+                }
+            }
+
+            Ok(body)
         }
     }
 
