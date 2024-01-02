@@ -1,4 +1,4 @@
-use stardust::{Renderable, Template};
+use stardust::Template;
 
 #[derive(Template)]
 #[template(path = "person.html")]

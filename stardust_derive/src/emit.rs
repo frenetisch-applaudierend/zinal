@@ -12,7 +12,7 @@ impl Item<'_> {
     pub(crate) fn emit_all(
         items: impl IntoIterator<Item = Self>,
     ) -> Result<Vec<TokenStream>, Error> {
-        items.into_iter().map(Item::emit).collect::<Result<_, _>>()
+        items.into_iter().map(Emit::emit).collect::<Result<_, _>>()
     }
 }
 
@@ -20,13 +20,13 @@ impl Emit for Item<'_> {
     fn emit(self) -> Result<TokenStream, Error> {
         match self {
             Item::Literal(s) => Ok(quote! {
-                write!(w, "{}", #s)?;
+                __stardust_context.render_literal(#s)?;
             }),
 
             Item::Expression(expr) => {
                 let expr = syn::parse_str::<syn::Expr>(expr.as_ref())?;
                 Ok(quote! {
-                    ::stardust::Renderable::render_to(&#expr, w)?;
+                    __stardust_context.render_expression(&#expr)?;
                 })
             }
 
@@ -66,7 +66,7 @@ impl Emit for Item<'_> {
                 if !children.is_empty() {
                     let children = Item::emit_all(children)?;
                     let tokens = quote! {
-                        children: &::stardust::FuncRenderable::new(|w: &mut dyn ::core::fmt::Write| {
+                        children: ::stardust::Children::new(|__stardust__context| {
                             #(#children)*
 
                             Ok(())
@@ -80,7 +80,7 @@ impl Emit for Item<'_> {
                 };
 
                 Ok(quote! {
-                    ::stardust::Renderable::render_to(&#template, w)?;
+                    __stardust_context.render_template(#template)?;
                 })
             }
         }
@@ -143,7 +143,9 @@ mod tests {
 
         let tokens = Item::emit_all(items);
 
-        let expected = quote! { write!(w, "{}", "Hello, World!")?; };
+        let expected = quote! {
+            __stardust_context.render_literal("Hello, World!")?;
+        };
 
         assert_text(tokens, expected);
     }
@@ -154,7 +156,9 @@ mod tests {
 
         let tokens = Item::emit_all(items);
 
-        let expected = quote! { ::stardust::Renderable::render_to(&self.name.to_upper(), w)?; };
+        let expected = quote! {
+            __stardust_context.render_expression(&self.name.to_upper())?;
+        };
 
         assert_text(tokens, expected);
     }
@@ -170,9 +174,9 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            write!(w, "{}", "Hello, ")?;
-            ::stardust::Renderable::render_to(&self.name.to_upper(), w)?;
-            write!(w, "{}", "!")?;
+            __stardust_context.render_literal("Hello, ")?;
+            __stardust_context.render_expression(&self.name.to_upper())?;
+            __stardust_context.render_literal("!")?;
         };
 
         assert_text(tokens, expected);
@@ -190,7 +194,7 @@ mod tests {
 
         let expected = quote! {
             if self.age > 18 {
-                write!(w, "{}", "Hello, World!")?;
+                __stardust_context.render_literal("Hello, World!")?;
             }
         };
 
@@ -209,7 +213,7 @@ mod tests {
 
         let expected = quote! {
             loop {
-                write!(w, "{}", "Hello, World!")?;
+                __stardust_context.render_literal("Hello, World!")?;
             }
         };
 
@@ -228,7 +232,7 @@ mod tests {
 
         let expected = quote! {
             for name in self.names {
-                write!(w, "{}", "Hello, World!")?;
+                __stardust_context.render_literal("Hello, World!")?;
             }
         };
 
@@ -255,10 +259,10 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            ::stardust::Renderable::render_to(&::module::Type {
+            __stardust_context.render_template(::module::Type {
                 expr: self.name,
                 lit: "Literal".into()
-            }, w)?;
+            })?;
         };
 
         assert_text(tokens, expected);

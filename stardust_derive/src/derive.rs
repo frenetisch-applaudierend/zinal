@@ -23,22 +23,20 @@ pub(crate) fn derive_template(input: ItemStruct) -> Result<TokenStream, Error> {
 
     let (content, content_type) = read_content(options)?;
 
-    let items = parser::parse(&content, &content_type)?;
+    let (items, content_type_ty) = parser::parse(&content, &content_type)?;
     let items = Item::emit_all(items)?;
 
     let name = input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let expanded = quote! {
-        impl #impl_generics ::stardust::Renderable for #name #ty_generics #where_clause {
-            fn render_to(&self, w: &mut dyn ::std::fmt::Write) -> ::std::result::Result<(), ::std::fmt::Error> {
+        impl #impl_generics ::stardust::Template<#content_type_ty> for #name #ty_generics #where_clause {
+            fn render(&self, __stardust_context: &mut ::stardust::RenderContext<#content_type_ty>) -> ::std::result::Result<(), ::std::fmt::Error> {
                 #(#items)*
 
                 Ok(())
             }
         }
-
-        impl #impl_generics stardust::Template for #name #ty_generics #where_clause {}
     };
 
     // Hand the output tokens back to the compiler

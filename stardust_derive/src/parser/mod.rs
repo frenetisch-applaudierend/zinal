@@ -8,19 +8,36 @@ mod common;
 mod html;
 mod input;
 
-pub fn parse<'src>(source: &'src str, content_type: &str) -> Result<Vec<Item<'src>>, syn::Error> {
+pub fn parse<'src>(
+    source: &'src str,
+    content_type: &str,
+) -> Result<(Vec<Item<'src>>, syn::TypePath), syn::Error> {
     let input = Input::new(source);
-    let mut parser = match content_type {
-        "html" => html::HtmlParser,
+    let (mut parser, content_type_ty) = read_content_type(content_type)?;
+
+    parser.parse(input).map(|items| (items, content_type_ty))
+}
+
+fn read_content_type(
+    content_type: &str,
+) -> Result<(impl TemplateParser, syn::TypePath), syn::Error> {
+    match content_type {
+        "html" => Ok((
+            html::HtmlParser,
+            parse_quote!(::stardust::content_types::Html),
+        )),
+        "plain" | "txt" => Ok((
+            html::HtmlParser,
+            parse_quote!(::stardust::content_types::Html),
+        )),
+
         _ => {
             return Err(syn::Error::new(
                 Span::call_site(),
                 "unsupported content type",
             ))
         }
-    };
-
-    parser.parse(input)
+    }
 }
 
 pub trait TemplateParser {
