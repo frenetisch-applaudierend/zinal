@@ -35,7 +35,7 @@ impl Escaper for HtmlEscaper {
             }
         }
 
-        if escaped.len() > 0 {
+        if !escaped.is_empty() {
             escaped.push_str(&value[previous_offset..offset]);
             escaped.into()
         } else {

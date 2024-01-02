@@ -32,7 +32,7 @@ fn read_content_type(
         )),
 
         _ => {
-            return Err(syn::Error::new(
+            Err(syn::Error::new(
                 Span::call_site(),
                 "unsupported content type",
             ))
@@ -89,23 +89,18 @@ pub enum TemplateArgumentValue<'src> {
 
 impl Keyword {
     pub fn has_body(self) -> bool {
-        match self {
+        matches!(
+            self,
             Keyword::If
-            | Keyword::Else
-            | Keyword::ElseIf
-            | Keyword::For
-            | Keyword::While
-            | Keyword::Loop => true,
-
-            _ => false,
-        }
+                | Keyword::Else
+                | Keyword::ElseIf
+                | Keyword::For
+                | Keyword::While
+                | Keyword::Loop
+        )
     }
 
     pub fn is_block_terminator(self) -> bool {
-        match self {
-            Keyword::Else | Keyword::ElseIf | Keyword::End => true,
-
-            _ => false,
-        }
+        matches!(self, Keyword::Else | Keyword::ElseIf | Keyword::End)
     }
 }

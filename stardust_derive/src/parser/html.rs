@@ -428,7 +428,7 @@ fn parse_child_template<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
             "Unterminated template reference",
         ));
 
-        fn parse_end_tag<'src>(input: &mut Input<'src>, name: &str) -> Result<bool, syn::Error> {
+        fn parse_end_tag(input: &mut Input<'_>, name: &str) -> Result<bool, syn::Error> {
             let position = input.position();
 
             if input.consume_lit("</").is_none() {
