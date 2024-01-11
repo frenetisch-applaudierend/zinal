@@ -66,7 +66,7 @@ impl Emit for Item<'_> {
                 if !children.is_empty() {
                     let children = Item::emit_all(children)?;
                     let tokens = quote! {
-                        children: ::stardust::Children::new(|__stardust__context| {
+                        children: ::stardust::Children::new(|__stardust_context| {
                             #(#children)*
 
                             Ok(())
