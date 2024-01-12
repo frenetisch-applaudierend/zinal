@@ -31,13 +31,8 @@ dependencies = [
 name = "stardust"
 version = "0.1.0"
 dependencies = [
- "stardust_core",
  "stardust_derive",
 ]
-
-[[package]]
-name = "stardust_core"
-version = "0.1.0"
 
 [[package]]
 name = "stardust_derive"
@@ -45,7 +40,6 @@ version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
- "stardust_core",
  "syn",
  "unicode-xid",
 ]

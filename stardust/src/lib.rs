@@ -5,9 +5,6 @@ mod context;
 mod renderable;
 mod template;
 
-#[cfg(feature = "axum")]
-mod axum;
-
 pub use children::*;
 pub use context::*;
 pub use renderable::*;

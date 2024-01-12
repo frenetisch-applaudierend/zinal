@@ -1,6 +1,7 @@
 use std::{ffi::OsStr, path::PathBuf};
 
 use proc_macro2::{Span, TokenStream};
+
 use syn::{Error, ItemStruct};
 
 use crate::{
@@ -29,7 +30,9 @@ pub(crate) fn derive_template(input: ItemStruct) -> Result<TokenStream, Error> {
     let name = input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    let expanded = quote! {
+    let mut expanded = TokenStream::new();
+
+    expanded.extend(quote! {
         impl #impl_generics ::stardust::Template<#content_type_ty> for #name #ty_generics #where_clause {
             fn render(&self, __stardust_context: &mut ::stardust::RenderContext<#content_type_ty>) -> ::std::result::Result<(), ::std::fmt::Error> {
                 #(#items)*
@@ -37,7 +40,16 @@ pub(crate) fn derive_template(input: ItemStruct) -> Result<TokenStream, Error> {
                 Ok(())
             }
         }
-    };
+    });
+
+    #[cfg(feature = "axum")]
+    expanded.extend(quote! {
+        impl #impl_generics ::core::convert::Into<::axum::body::Body> for #name #ty_generics #where_clause {
+            fn into(self) -> ::axum::body::Body {
+                self.render_to_string().into()
+            }
+        }
+    });
 
     // Hand the output tokens back to the compiler
     Ok(expanded)

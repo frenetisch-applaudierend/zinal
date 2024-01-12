@@ -24,19 +24,17 @@ fn read_content_type(
     match content_type {
         "html" => Ok((
             html::HtmlParser,
-            parse_quote!(::stardust::content_types::Html),
+            parse_quote!(::stardust::content_type::Html),
         )),
         "plain" | "txt" => Ok((
             html::HtmlParser,
-            parse_quote!(::stardust::content_types::Html),
+            parse_quote!(::stardust::content_type::Html),
         )),
 
-        _ => {
-            Err(syn::Error::new(
-                Span::call_site(),
-                "unsupported content type",
-            ))
-        }
+        _ => Err(syn::Error::new(
+            Span::call_site(),
+            "unsupported content type",
+        )),
     }
 }
 
