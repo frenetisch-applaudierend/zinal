@@ -46,7 +46,7 @@ pub(crate) fn derive_template(input: ItemStruct) -> Result<TokenStream, Error> {
     expanded.extend(quote! {
         impl #impl_generics ::core::convert::Into<::axum::body::Body> for #name #ty_generics #where_clause {
             fn into(self) -> ::axum::body::Body {
-                self.render_to_string().into()
+                self.render_to_string().expect("Could not render template to string").into()
             }
         }
     });
