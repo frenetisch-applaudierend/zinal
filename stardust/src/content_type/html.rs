@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::OnceLock};
 
-use crate::{ContentType, Escaper};
+use super::{ContentType, Escaper};
 
 pub struct Html;
 
@@ -50,7 +50,7 @@ static ESCAPES: OnceLock<HashMap<char, &'static str>> = OnceLock::new();
 mod tests {
     use std::borrow::Cow;
 
-    use crate::Escaper;
+    use crate::content_type::Escaper;
 
     use super::HtmlEscaper;
 

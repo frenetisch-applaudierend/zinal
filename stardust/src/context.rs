@@ -1,4 +1,4 @@
-use crate::{Children, ContentType, Renderable, Template};
+use crate::{content_type::ContentType, Children, Renderable, Template};
 
 pub struct RenderContext<'a, C: ContentType> {
     writer: &'a mut dyn std::fmt::Write,

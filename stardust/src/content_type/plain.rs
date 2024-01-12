@@ -1,4 +1,4 @@
-use crate::{ContentType, Escaper};
+use super::{ContentType, Escaper};
 
 pub struct PlainText;
 
