@@ -1,7 +1,7 @@
 use std::fmt::Error;
 
 use crate::{
-    content_types::{Html, PlainText},
+    content_type::{Html, PlainText},
     Children, RenderContext, Renderable, Template,
 };
 

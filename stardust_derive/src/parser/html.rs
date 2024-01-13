@@ -9,7 +9,7 @@ use crate::parser::{
 };
 
 use super::{
-    common::{parse_rust_typename, select5, ParseResult},
+    common::{parse_rust_typename, select6, ParseResult},
     input::Input,
     Item, TemplateParser,
 };
@@ -29,12 +29,13 @@ impl TemplateParser for HtmlParser {
 }
 
 fn parse_template_item<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
-    select5(
+    select6(
         input,
         (
             parse_escape,
             parse_expression,
             parse_statement,
+            parse_comment,
             parse_child_template,
             parse_literal,
         ),
@@ -239,6 +240,22 @@ fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
 
         Ok(trim(content))
     }
+}
+
+fn parse_comment<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
+    let Some(start) = input.consume_lit("<!--") else {
+        return Ok(None);
+    };
+
+    let content = input.consume_until("-->");
+
+    let Some(end) = input.consume_lit("-->") else {
+        return Err(syn::Error::new(Span::call_site(), "Unterminated comment"));
+    };
+
+    let comment = input.combine(&[start, content, end]);
+
+    Ok(Some(Item::Literal(comment.into_cow())))
 }
 
 fn parse_child_template<'src>(input: &mut Input<'src>) -> ParseResult<'src> {

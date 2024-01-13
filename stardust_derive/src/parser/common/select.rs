@@ -67,3 +67,22 @@ pub fn select5<'src>(
 
     return select4(input, (p2, p3, p4, p5));
 }
+
+pub fn select6<'src>(
+    input: &mut Input<'src>,
+    parsers: (
+        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
+        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
+        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
+        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
+        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
+        impl FnOnce(&mut Input<'src>) -> ParseResult<'src>,
+    ),
+) -> ParseResult<'src> {
+    let (p1, p2, p3, p4, p5, p6) = parsers;
+    if let Some(result) = p1(input)? {
+        return Ok(Some(result));
+    }
+
+    return select5(input, (p2, p3, p4, p5, p6));
+}

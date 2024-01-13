@@ -233,6 +233,20 @@ fn block_statement_if() {
 }
 
 #[test]
+fn comment() {
+    let mut parser = HtmlParser;
+
+    let input = Input::new("<!-- Comment {expr} <#end> -->");
+
+    let result = parser.parse(input).expect("Should have parsed");
+
+    assert_eq!(
+        result,
+        vec![Item::Literal(Cow::from("<!-- Comment {expr} <#end> -->"))]
+    );
+}
+
+#[test]
 fn child_template_minimal() {
     let mut parser = HtmlParser;
 
