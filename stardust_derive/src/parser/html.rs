@@ -11,13 +11,13 @@ use crate::parser::{
 use super::{
     common::{parse_rust_typename, select6, ParseResult},
     input::Input,
-    Item, TemplateParser,
+    Item,
 };
 
 pub struct HtmlParser;
 
-impl TemplateParser for HtmlParser {
-    fn parse<'src>(&mut self, mut input: Input<'src>) -> Result<Vec<Item<'src>>, syn::Error> {
+impl HtmlParser {
+    pub fn parse<'src>(&mut self, mut input: Input<'src>) -> Result<Vec<Item<'src>>, syn::Error> {
         let mut items = Vec::new();
 
         while !input.is_at_end() {

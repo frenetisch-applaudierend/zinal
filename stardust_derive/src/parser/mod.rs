@@ -1,45 +1,16 @@
 use std::borrow::Cow;
 
-use proc_macro2::Span;
-
-use self::input::Input;
+use self::{html::HtmlParser, input::Input};
 
 mod common;
 mod html;
 mod input;
 
-pub fn parse<'src>(
-    source: &'src str,
-    content_type: &str,
-) -> Result<(Vec<Item<'src>>, syn::TypePath), syn::Error> {
+pub fn parse<'src>(source: &'src str) -> Result<Vec<Item<'src>>, syn::Error> {
     let input = Input::new(source);
-    let (mut parser, content_type_ty) = read_content_type(content_type)?;
+    let mut parser = HtmlParser;
 
-    parser.parse(input).map(|items| (items, content_type_ty))
-}
-
-fn read_content_type(
-    content_type: &str,
-) -> Result<(impl TemplateParser, syn::TypePath), syn::Error> {
-    match content_type {
-        "html" => Ok((
-            html::HtmlParser,
-            parse_quote!(::stardust::content_type::Html),
-        )),
-        "plain" | "txt" => Ok((
-            html::HtmlParser,
-            parse_quote!(::stardust::content_type::Html),
-        )),
-
-        _ => Err(syn::Error::new(
-            Span::call_site(),
-            "unsupported content type",
-        )),
-    }
-}
-
-pub trait TemplateParser {
-    fn parse<'src>(&mut self, input: Input<'src>) -> Result<Vec<Item<'src>>, syn::Error>;
+    parser.parse(input).map(|items| items)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

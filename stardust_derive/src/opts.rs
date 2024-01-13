@@ -6,7 +6,6 @@ use syn::{ext::IdentExt, parse::ParseStream, spanned::Spanned, Attribute, Ident,
 pub(crate) struct TemplateOptions {
     pub(crate) content: Option<String>,
     pub(crate) path: Option<String>,
-    pub(crate) content_type: Option<String>,
 }
 
 impl TemplateOptions {
@@ -37,12 +36,6 @@ impl TemplateOptions {
                         input.parse::<Token![=]>()?;
                         let path = input.parse::<LitStr>()?;
                         parsed.set_path(path.value(), path.span())?;
-                    }
-
-                    "type" => {
-                        input.parse::<Token![=]>()?;
-                        let content_type = input.parse::<LitStr>()?;
-                        parsed.set_content_type(content_type.value(), content_type.span())?;
                     }
 
                     _ => {
@@ -78,10 +71,6 @@ impl TemplateOptions {
             self.set_path(path, attr.span())?;
         }
 
-        if let Some(content_type) = parsed.content_type {
-            self.set_content_type(content_type, attr.span())?;
-        }
-
         Ok(())
     }
 
@@ -103,27 +92,7 @@ impl TemplateOptions {
         }
     }
 
-    pub(crate) fn set_content_type(
-        &mut self,
-        content_type: String,
-        span: Span,
-    ) -> Result<(), syn::Error> {
-        if self.content_type.is_none() {
-            self.content_type.replace(content_type);
-            Ok(())
-        } else {
-            Err(syn::Error::new(span, "Duplicate content type declaration"))
-        }
-    }
-
     pub(crate) fn validate(&self) -> Result<(), syn::Error> {
-        if self.content.is_some() && self.content_type.is_none() {
-            return Err(syn::Error::new(
-                Span::call_site(),
-                "Missing content type for inline content, add template(type = \"...\") to specify the content type",
-            ));
-        }
-
         if self.content.is_none() && self.path.is_none() {
             return Err(syn::Error::new(
                 Span::call_site(),
@@ -163,7 +132,7 @@ mod tests {
     #[test]
     fn parse_content_shorthand() {
         let attr: Attribute = parse_quote! {
-            #[template("Test", type = "html")]
+            #[template("Test")]
         };
 
         let result = attr.parse_args_with(TemplateOptions::parse_attr);
@@ -171,7 +140,6 @@ mod tests {
         assert!(result.is_ok_and(|o| {
             assert_eq!(o.content, Some("Test".to_string()));
             assert!(o.path.is_none());
-            assert_eq!(o.content_type, Some("html".to_string()));
             true
         }));
     }
@@ -179,7 +147,7 @@ mod tests {
     #[test]
     fn parse_content() {
         let attr: Attribute = parse_quote! {
-            #[template(content = "Test", type = "html")]
+            #[template(content = "Test")]
         };
 
         let result = attr.parse_args_with(TemplateOptions::parse_attr);
@@ -187,7 +155,6 @@ mod tests {
         assert!(result.is_ok_and(|o| {
             assert_eq!(o.content, Some("Test".to_string()));
             assert!(o.path.is_none());
-            assert_eq!(o.content_type, Some("html".to_string()));
             true
         }));
     }
@@ -203,7 +170,6 @@ mod tests {
         assert!(result.is_ok_and(|o| {
             assert_eq!(o.path, Some("test/foo.html".to_string()));
             assert!(o.content.is_none());
-            assert!(o.content_type.is_none());
             true
         }));
     }

@@ -1,12 +1,12 @@
-pub mod content_type;
-
 mod children;
 mod context;
+mod escaper;
 mod renderable;
 mod template;
 
 pub use children::*;
 pub use context::*;
+pub use escaper::*;
 pub use renderable::*;
 pub use template::*;
 

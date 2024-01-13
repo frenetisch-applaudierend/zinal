@@ -1,21 +1,9 @@
 use std::{collections::HashMap, sync::OnceLock};
 
-use super::{ContentType, Escaper};
-
-pub struct Html;
-
-impl ContentType for Html {
-    type Escaper = HtmlEscaper;
-
-    fn escaper() -> Self::Escaper {
-        HtmlEscaper
-    }
-}
-
 pub struct HtmlEscaper;
 
-impl Escaper for HtmlEscaper {
-    fn escape_string<'a>(&self, value: std::borrow::Cow<'a, str>) -> std::borrow::Cow<'a, str> {
+impl HtmlEscaper {
+    pub fn escape_string<'a>(&self, value: std::borrow::Cow<'a, str>) -> std::borrow::Cow<'a, str> {
         let mut escaped = String::new();
         let escapes =
             ESCAPES.get_or_init(|| HashMap::from([('<', "&lt;"), ('>', "&gt;"), ('&', "&amp;")]));
@@ -49,8 +37,6 @@ static ESCAPES: OnceLock<HashMap<char, &'static str>> = OnceLock::new();
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
-
-    use crate::content_type::Escaper;
 
     use super::HtmlEscaper;
 

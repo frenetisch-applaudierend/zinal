@@ -9,7 +9,7 @@ struct Person {
 }
 
 #[derive(Template)]
-#[template(type = "html", content = "<p>Name: {self.name}</p>")]
+#[template("<p>Name: {self.name}</p>")]
 struct Child<'a> {
     name: &'a str,
 }

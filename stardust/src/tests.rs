@@ -1,9 +1,6 @@
 use std::fmt::Error;
 
-use crate::{
-    content_type::{Html, PlainText},
-    Children, RenderContext, Renderable, Template,
-};
+use crate::{Children, RenderContext, Renderable, Template};
 
 #[test]
 fn hello_world() {
@@ -11,8 +8,8 @@ fn hello_world() {
         name: &'a dyn Renderable,
     }
 
-    impl Template<PlainText> for HelloWorld<'_> {
-        fn render(&self, context: &mut RenderContext<PlainText>) -> Result<(), std::fmt::Error> {
+    impl Template for HelloWorld<'_> {
+        fn render(&self, context: &mut RenderContext) -> Result<(), std::fmt::Error> {
             context.render_literal("Hello, ")?;
             context.render_renderable(self.name)?;
 
@@ -55,19 +52,19 @@ fn target_example() {
     struct Person<'a> {
         name: &'a str,
         age: u8,
-        children: Children<Html>,
+        children: Children<'a>,
     }
 
     // Target derived impls
 
-    impl Template<Html> for Info {
-        fn render(&self, context: &mut RenderContext<Html>) -> Result<(), Error> {
+    impl Template for Info {
+        fn render(&self, context: &mut RenderContext) -> Result<(), Error> {
             context.render_literal("<div>")?;
 
             context.render_template(Person {
                 name: "Fred",
                 age: 35,
-                children: Children::new(|c| {
+                children: Children::new(&|c| {
                     c.render_literal("<p>Lorem ipsum...</p>")?;
 
                     Ok(())
@@ -80,8 +77,8 @@ fn target_example() {
         }
     }
 
-    impl Template<Html> for Person<'_> {
-        fn render(&self, context: &mut RenderContext<Html>) -> Result<(), Error> {
+    impl Template for Person<'_> {
+        fn render(&self, context: &mut RenderContext) -> Result<(), Error> {
             context.render_literal("<p>Name: ")?;
             context.render_expression(&self.name)?;
             context.render_literal("</p><p>Age: ")?;
