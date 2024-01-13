@@ -1,4 +1,4 @@
-use stardust::{Renderable, Template};
+use stardust::{content_type::Html, Children, RenderContext, Template};
 
 #[derive(Template)]
 #[template(
@@ -15,7 +15,28 @@ struct Info;
 struct Person<'a> {
     name: &'a str,
     age: u8,
-    children: &'a dyn Renderable,
+    children: Children<Html>,
+}
+
+struct Test {
+    name: String,
+}
+
+impl Template<Html> for Test {
+    fn render(&self, ctx: &mut RenderContext<'_, Html>) -> Result<(), std::fmt::Error> {
+        ctx.render_template(Person {
+            name: &self.name,
+            age: 10,
+            children: Children::new(|ctx| {
+                ctx.render_literal("Hello")?;
+                ctx.render_expression(&self.name)?;
+
+                Ok(())
+            }),
+        })?;
+
+        todo!()
+    }
 }
 
 fn main() {
