@@ -6,11 +6,11 @@ mod common;
 mod html;
 mod input;
 
-pub fn parse<'src>(source: &'src str) -> Result<Vec<Item<'src>>, syn::Error> {
+pub fn parse(source: &str) -> Result<Vec<Item<'_>>, syn::Error> {
     let input = Input::new(source);
     let mut parser = HtmlParser;
 
-    parser.parse(input).map(|items| items)
+    parser.parse(input)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
