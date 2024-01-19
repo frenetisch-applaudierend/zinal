@@ -1,6 +1,2 @@
-[[language]]
-name = "rust"
-
 [language-server.rust-analyzer]
-config = { cargo = { features = "all" } }
-
+config = { checkOnSave = { command = "clippy" }, cargo = { allFeatures = true }}
