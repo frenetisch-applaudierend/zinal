@@ -4,6 +4,7 @@ mod escaper;
 mod renderable;
 mod template;
 
+pub mod builder;
 #[cfg(feature = "derive")]
 pub mod derive;
 

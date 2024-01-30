@@ -51,7 +51,7 @@ impl TemplateGenerics {
 
             args.push(parse_quote!(#tail_ident));
             predicates.push(
-                parse_quote!(__stardust_Token: ::stardust::derive::HasProperty<#prop_type, #tail_ident>),
+                parse_quote!(__stardust_Token: ::stardust::builder::HasProperty<#prop_type, #tail_ident>),
             );
         }
 

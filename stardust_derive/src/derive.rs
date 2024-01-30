@@ -58,7 +58,7 @@ fn derive_template_impl(
             }
 
             fn builder() -> Self::Builder {
-                #builder_ty::new(())
+                #builder_ty::new()
             }
         }
     });
@@ -80,15 +80,22 @@ fn derive_template_impl(
 
 fn derive_values(input: &ItemStruct, generics: &TemplateGenerics) -> Result<TokenStream, Error> {
     let name = generated_ident(input, "Values");
-    let ty_generics = generics.values_generics();
+    let decl_generics = generics.values_generics();
+    let (impl_generics, ty_generics, where_clause) = decl_generics.split_for_impl();
     let fields = derive_fields(get_named_fields(input)?);
     
     return Ok(quote! {
 
         #[doc(hidden)]
         #[allow(non_camel_case_types)]
-        struct #name #ty_generics {
+        struct #name #decl_generics {
             #(#fields),*
+        }
+
+        impl #impl_generics ::std::default::Default for #name #ty_generics #where_clause {
+            fn default() -> Self {
+                todo!()
+            }
         }
     });
 
@@ -155,13 +162,12 @@ fn derive_builder(input: &ItemStruct, generics: &TemplateGenerics) -> Result<Tok
 
         #[doc(hidden)]
         #[allow(non_camel_case_types)]
-        struct #builder_ident #decl_generics {
-            values: #values_ident #values_args,
-            token: __stardust_Token
-        }
+        struct #builder_ident #decl_generics(::stardust::builder::TemplateBuilder<#values_ident #values_args, __stardust_Token>);
 
         impl #impl_generics #builder_ident #ty_generics #where_clause {
-            pub fn new(token: __stardust_Token) -> Self { todo!() }
+            pub fn new() -> Self {
+                Self(::stardust::builder::TemplateBuilder::<#values_ident #values_args, __stardust_Token>::new(::std::default::Default::default()))
+            }
 
             #(#setters)*
         }
@@ -177,7 +183,7 @@ fn derive_builder(input: &ItemStruct, generics: &TemplateGenerics) -> Result<Tok
         let ty = &field.ty;
         let props_mod = generated_ident(input, "Properties");
         let prop = quote!(#props_mod::#ident);
-        let builder_args = generics.builder_args(parse_quote!(::stardust::derive::WithProperty<#prop, __stardust_Token>));
+        let builder_args = generics.builder_args(parse_quote!(::stardust::builder::WithProperty<#prop, __stardust_Token>));
         
         quote! {
             pub fn #ident(self, value: #ty) -> #builder_ident #builder_args {
