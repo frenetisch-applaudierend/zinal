@@ -66,17 +66,17 @@ impl Emit for Item<'_> {
                 if !children.is_empty() {
                     let children = Item::emit_all(children)?;
                     let tokens = quote! {
-                        children: ::stardust::Children::new(&|__stardust_context| {
+                        .children(::stardust::Children::new(&|__stardust_context| {
                             #(#children)*
 
                             Ok(())
-                        })
+                        }))
                     };
                     arguments.push(tokens);
                 }
 
                 let template = quote! {
-                    #ty { #(#arguments),* }
+                    #ty::builder() #(#arguments)* .build()
                 };
 
                 Ok(quote! {
@@ -112,7 +112,7 @@ impl Emit for TemplateArgument<'_> {
         let value = self.value.emit()?;
 
         Ok(quote! {
-            #name: #value
+            .#name(#value)
         })
     }
 }

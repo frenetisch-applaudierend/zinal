@@ -1,7 +1,7 @@
 use stardust::{Children, Renderable, Template};
 
 #[derive(Template)]
-#[template("<div><Person name='Fred' age={35}><p>Lorem ipsum...</p></Person></div>")]
+#[template("<div><Person name='Fred' age={2}><p>Lorem ipsum...</p></Person></div>")]
 struct Info;
 
 #[derive(Template)]

@@ -1,12 +1,17 @@
+use proc_macro2::{Ident, Span};
 use syn::{
     punctuated::Punctuated, token::Comma, AngleBracketedGenericArguments, GenericArgument,
-    GenericParam, Generics, Type,
+    GenericParam, Generics, Type, WhereClause,
 };
+
+use crate::derive::generated_ident;
 
 pub(crate) struct TemplateGenerics {
     builder_gen: Generics,
     values_gen: Generics,
     args_template: Punctuated<GenericArgument, Comma>,
+    build_params: Option<AngleBracketedGenericArguments>,
+    build_where_clause: Option<WhereClause>,
 }
 
 impl TemplateGenerics {
@@ -35,10 +40,46 @@ impl TemplateGenerics {
             }
         }
 
+        let mut args = Punctuated::new();
+        let mut predicates = Punctuated::new();
+
+        for field in input.fields.iter() {
+            let prop_mod_ident = generated_ident(input, "Properties");
+            let prop_ident = field.ident.as_ref().expect("Should be a named field");
+            let tail_ident = Ident::new(&format!("Tail_{}", prop_ident), Span::mixed_site());
+            let prop_type: Type = parse_quote!(#prop_mod_ident::#prop_ident);
+
+            args.push(parse_quote!(#tail_ident));
+            predicates.push(
+                parse_quote!(__stardust_Token: ::stardust::derive::HasProperty<#prop_type, #tail_ident>),
+            );
+        }
+
+        let build_params = if !args.is_empty() {
+            Some(AngleBracketedGenericArguments {
+                colon2_token: None,
+                lt_token: <Token![<]>::default(),
+                args,
+                gt_token: <Token![>]>::default(),
+            })
+        } else {
+            None
+        };
+        let build_where_clause = if !predicates.is_empty() {
+            Some(WhereClause {
+                where_token: <Token![where]>::default(),
+                predicates,
+            })
+        } else {
+            None
+        };
+
         Self {
             builder_gen,
             values_gen,
             args_template,
+            build_params,
+            build_where_clause,
         }
     }
 
@@ -56,6 +97,14 @@ impl TemplateGenerics {
             args,
             gt_token: parse_quote!(>),
         }
+    }
+
+    pub(crate) fn builder_build_params(&self) -> Option<&AngleBracketedGenericArguments> {
+        self.build_params.as_ref()
+    }
+
+    pub(crate) fn builder_build_where_clause(&self) -> Option<&WhereClause> {
+        self.build_where_clause.as_ref()
     }
 
     pub(crate) fn values_generics(&self) -> &Generics {

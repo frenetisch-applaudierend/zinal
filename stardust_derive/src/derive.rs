@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use proc_macro2::{Span, TokenStream};
 
-use syn::{spanned::Spanned, Error, FieldsNamed, Ident, ItemStruct};
+use syn::{spanned::Spanned, Error, FieldsNamed, Ident, ItemStruct, Field};
 
 use crate::{
     opts::TemplateOptions,
@@ -145,9 +145,13 @@ fn derive_builder(input: &ItemStruct, generics: &TemplateGenerics) -> Result<Tok
 
     let decl_generics = generics.builder_generics();
     let (impl_generics, ty_generics, where_clause) = generics.builder_generics().split_for_impl();
+
     let values_args = generics.values_args();
 
-    Ok(quote! {
+    let setters = input.fields.iter().map(|f| derive_setter(input, &builder_ident, generics, f)).collect::<Vec<_>>();
+    let build_method = derive_build_method(input, generics);
+
+    return Ok(quote! {
 
         #[doc(hidden)]
         #[allow(non_camel_case_types)]
@@ -158,11 +162,45 @@ fn derive_builder(input: &ItemStruct, generics: &TemplateGenerics) -> Result<Tok
 
         impl #impl_generics #builder_ident #ty_generics #where_clause {
             pub fn new(token: __stardust_Token) -> Self { todo!() }
+
+            #(#setters)*
         }
-    })
+
+        impl #impl_generics #builder_ident #ty_generics #where_clause {
+            #build_method
+        }
+    });
+
+
+    fn derive_setter(input: &ItemStruct, builder_ident: &Ident, generics: &TemplateGenerics, field: &Field) -> TokenStream {
+        let ident = &field.ident;
+        let ty = &field.ty;
+        let props_mod = generated_ident(input, "Properties");
+        let prop = quote!(#props_mod::#ident);
+        let builder_args = generics.builder_args(parse_quote!(::stardust::derive::WithProperty<#prop, __stardust_Token>));
+        
+        quote! {
+            pub fn #ident(self, value: #ty) -> #builder_ident #builder_args {
+                todo!()
+            }
+        }
+    }
+
+    fn derive_build_method(input: &ItemStruct, generics: &TemplateGenerics) -> TokenStream {
+        let template_ident = &input.ident;
+        let (_, template_generics, _) = &input.generics.split_for_impl();
+        let gen_args = generics.builder_build_params();
+        let where_clause = generics.builder_build_where_clause();
+
+        quote! {
+            pub fn build #gen_args (self) -> #template_ident #template_generics #where_clause {
+                todo!()
+            }
+        }
+    }
 }
 
-fn generated_ident(input: &ItemStruct, name: &str) -> Ident {
+pub(crate) fn generated_ident(input: &ItemStruct, name: &str) -> Ident {
     Ident::new(&format!("__stardust_generated_{}_{}", input.ident, name), input.ident.span())
 }
 
