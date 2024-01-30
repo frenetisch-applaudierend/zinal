@@ -11,7 +11,6 @@ use syn::ItemStruct;
 
 mod derive;
 mod emit;
-mod generics;
 mod opts;
 mod parser;
 

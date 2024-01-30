@@ -14,6 +14,15 @@ impl<Values, Token> TemplateBuilder<Values, Token> {
     }
 }
 
+impl<Values, Token> Default for TemplateBuilder<Values, Token>
+where
+    Values: Default,
+{
+    fn default() -> Self {
+        Self::new(Default::default())
+    }
+}
+
 impl<Values, Token> TemplateBuilder<Values, Token> {
     pub fn set<Prop>(
         self,

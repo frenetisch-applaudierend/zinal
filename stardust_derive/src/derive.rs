@@ -2,21 +2,30 @@ use std::path::PathBuf;
 
 use proc_macro2::{Span, TokenStream};
 
-use syn::{spanned::Spanned, Error, FieldsNamed, Ident, ItemStruct, Field};
+use syn::{spanned::Spanned, Error, FieldsNamed, Ident, ItemStruct};
 
 use crate::{
     opts::TemplateOptions,
-    parser::{self, Item}, generics::TemplateGenerics,
+    parser::{self, Item},
 };
 
-pub(crate) fn derive(input: ItemStruct) -> Result<TokenStream, Error> {
-    let options = TemplateOptions::from_struct(&input)?;
-    let generics = TemplateGenerics::from_template(&input);
+mod values;
+mod properties;
+mod builder;
 
-    let template_impl = derive_template_impl(&input, &options, &generics)?;
-    let values = derive_values(&input, &generics)?;
-    let properties = derive_properties(&input)?;
-    let builder = derive_builder(&input, &generics)?;
+use values::*;
+use properties::*;
+use builder::*;
+
+pub(crate) fn derive(template: ItemStruct) -> Result<TokenStream, Error> {
+    let options = TemplateOptions::from_struct(&template)?;
+
+    let fields_named = get_named_fields(&template)?;
+    let values = TemplateValues::from_template(&template, fields_named);
+    let properties = TemplateProperties::from_template(&template, fields_named);
+    let builder = TemplateBuilder::from_template(&template, fields_named, &values, &properties);
+
+    let template_impl = derive_template_impl(&template, &options,  &values, &builder)?;
 
     Ok(quote! {
         #template_impl
@@ -27,29 +36,29 @@ pub(crate) fn derive(input: ItemStruct) -> Result<TokenStream, Error> {
 }
 
 fn derive_template_impl(
-    input: &ItemStruct,
+    template: &ItemStruct,
     options: &TemplateOptions,
-    generics: &TemplateGenerics
+    values: &TemplateValues,
+    builder: &TemplateBuilder<'_>
 ) -> Result<TokenStream, Error> {
     let content = read_content(options)?;
 
     let items = parser::parse(&content)?;
     let items = Item::emit_all(items)?;
 
-    let name = &input.ident;
+    let ident = &template.ident;
+    let (impl_generics, ty_generics, where_clause) = template.generics.split_for_impl();
 
-    let builder_ty = generated_ident(input, "Builder");
-    let builder_generic_args = generics.builder_args(parse_quote!(()));
-
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let builder_ty = &builder.ident;
+    let builder_args = builder.generic_args(values.initial_token_ty());
 
     let mut expanded = TokenStream::new();
 
     expanded.extend(quote! {
 
         #[automatically_derived]
-        impl #impl_generics ::stardust::Template for #name #ty_generics #where_clause {
-            type Builder = #builder_ty #builder_generic_args; 
+        impl #impl_generics ::stardust::Template for #ident #ty_generics #where_clause {
+            type Builder = #builder_ty #builder_args; 
             
             fn render(&self, __stardust_context: &mut ::stardust::RenderContext) -> ::std::result::Result<(), ::std::fmt::Error> {
                 #(#items)*
@@ -67,7 +76,7 @@ fn derive_template_impl(
     expanded.extend(quote! {
 
         #[automatically_derived]
-        impl #impl_generics ::core::convert::Into<::axum::body::Body> for #name #ty_generics #where_clause {
+        impl #impl_generics ::core::convert::Into<::axum::body::Body> for #ident #ty_generics #where_clause {
             fn into(self) -> ::axum::body::Body {
                 self.render_to_string().expect("Could not render template to string").into()
             }
@@ -78,144 +87,16 @@ fn derive_template_impl(
     Ok(expanded)
 }
 
-fn derive_values(input: &ItemStruct, generics: &TemplateGenerics) -> Result<TokenStream, Error> {
-    let name = generated_ident(input, "Values");
-    let decl_generics = generics.values_generics();
-    let (impl_generics, ty_generics, where_clause) = decl_generics.split_for_impl();
-    let fields = derive_fields(get_named_fields(input)?);
-    
-    return Ok(quote! {
-
-        #[doc(hidden)]
-        #[allow(non_camel_case_types)]
-        struct #name #decl_generics {
-            #(#fields),*
-        }
-
-        impl #impl_generics ::std::default::Default for #name #ty_generics #where_clause {
-            fn default() -> Self {
-                todo!()
-            }
-        }
-    });
-
-    fn derive_fields(fields: Option<&FieldsNamed>) -> Vec<TokenStream> {
-        let Some(fields) = fields else {
-            return vec![TokenStream::new()];
-        };
-
-        fields
-            .named
-            .iter()
-            .map(|f| {
-                let name = f.ident.clone();
-                let ty = f.ty.clone();
-                quote! { #name: ::stardust::derive::Property<#ty> }
-            })
-            .collect::<Vec<_>>()
-    }
+pub(crate) fn generated_ident(template: &ItemStruct, name: &str) -> Ident {
+    Ident::new(&format!("__stardust_generated_{}_{}", template.ident, name), template.ident.span())
 }
 
-fn derive_properties(input: &ItemStruct) -> Result<TokenStream, Error> {
-    // No need for props module if there are no fields
-    let Some(fields) = get_named_fields(input)? else {
-        return Ok(TokenStream::new());
-    };
-
-    let mod_name = generated_ident(input, "Properties");
-    let property_tys = fields
-        .named
-        .iter()
-        .map(|f| {
-            let ident = f.ident.as_ref().expect("Must be a named field");
-            quote! {
-                #[allow(non_camel_case_types)]
-                pub struct #ident;
-            }
-        })
-        .collect::<Vec<_>>();
-
-
-    Ok(quote! {
-
-        #[doc(hidden)]
-        #[allow(non_snake_case)]
-        pub mod #mod_name {
-            #(#property_tys)*
-        }
-    })
-}
-
-fn derive_builder(input: &ItemStruct, generics: &TemplateGenerics) -> Result<TokenStream, Error> {
-    let builder_ident = generated_ident(input, "Builder");
-    let values_ident = generated_ident(input, "Values");
-
-    let decl_generics = generics.builder_generics();
-    let (impl_generics, ty_generics, where_clause) = generics.builder_generics().split_for_impl();
-
-    let values_args = generics.values_args();
-
-    let setters = input.fields.iter().map(|f| derive_setter(input, &builder_ident, generics, f)).collect::<Vec<_>>();
-    let build_method = derive_build_method(input, generics);
-
-    return Ok(quote! {
-
-        #[doc(hidden)]
-        #[allow(non_camel_case_types)]
-        struct #builder_ident #decl_generics(::stardust::builder::TemplateBuilder<#values_ident #values_args, __stardust_Token>);
-
-        impl #impl_generics #builder_ident #ty_generics #where_clause {
-            pub fn new() -> Self {
-                Self(::stardust::builder::TemplateBuilder::<#values_ident #values_args, __stardust_Token>::new(::std::default::Default::default()))
-            }
-
-            #(#setters)*
-        }
-
-        impl #impl_generics #builder_ident #ty_generics #where_clause {
-            #build_method
-        }
-    });
-
-
-    fn derive_setter(input: &ItemStruct, builder_ident: &Ident, generics: &TemplateGenerics, field: &Field) -> TokenStream {
-        let ident = &field.ident;
-        let ty = &field.ty;
-        let props_mod = generated_ident(input, "Properties");
-        let prop = quote!(#props_mod::#ident);
-        let builder_args = generics.builder_args(parse_quote!(::stardust::builder::WithProperty<#prop, __stardust_Token>));
-        
-        quote! {
-            pub fn #ident(self, value: #ty) -> #builder_ident #builder_args {
-                #builder_ident(self.0.set::<#prop>(|values| { values.#ident = ::stardust::derive::Property::Set(value); }))
-            }
-        }
-    }
-
-    fn derive_build_method(input: &ItemStruct, generics: &TemplateGenerics) -> TokenStream {
-        let template_ident = &input.ident;
-        let (_, template_generics, _) = &input.generics.split_for_impl();
-        let gen_args = generics.builder_build_params();
-        let where_clause = generics.builder_build_where_clause();
-
-        quote! {
-            pub fn build #gen_args (self) -> #template_ident #template_generics #where_clause {
-                todo!()
-            }
-        }
-    }
-}
-
-pub(crate) fn generated_ident(input: &ItemStruct, name: &str) -> Ident {
-    Ident::new(&format!("__stardust_generated_{}_{}", input.ident, name), input.ident.span())
-}
-
-fn get_named_fields(input: &ItemStruct) -> Result<Option<&FieldsNamed>, Error> {
-    let fields = match &input.fields {
+fn get_named_fields(template: &ItemStruct) -> Result<Option<&FieldsNamed>, Error> {
+    let fields = match &template.fields {
         syn::Fields::Named(f) => f,
         syn::Fields::Unnamed(_) => {
             return Err(Error::new(
-                input.fields.span(),
+                template.fields.span(),
                 "Cannot derive Template for tuple structs, please use a struct with named fields instead",
             ))
         }
