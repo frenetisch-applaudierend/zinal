@@ -1,6 +1,19 @@
-use std::fmt::Error;
+use std::{fmt::Error, marker::PhantomData};
 
 use crate::{Children, RenderContext, Renderable, Template};
+
+struct DummyBuilder<T>(PhantomData<T>);
+
+impl<T> DummyBuilder<T> {
+    fn new() -> Self {
+        Self(PhantomData)
+    }
+
+    #[allow(dead_code)]
+    fn build(self) -> T {
+        panic!("Unsupported")
+    }
+}
 
 #[test]
 fn hello_world() {
@@ -9,11 +22,17 @@ fn hello_world() {
     }
 
     impl Template for HelloWorld<'_> {
+        type Builder = DummyBuilder<Self>;
+
         fn render(&self, context: &mut RenderContext) -> Result<(), std::fmt::Error> {
             context.render_literal("Hello, ")?;
             context.render_renderable(self.name)?;
 
             Ok(())
+        }
+
+        fn builder() -> Self::Builder {
+            DummyBuilder::new()
         }
     }
 
@@ -58,6 +77,8 @@ fn target_example() {
     // Target derived impls
 
     impl Template for Info {
+        type Builder = DummyBuilder<Info>;
+
         fn render(&self, context: &mut RenderContext) -> Result<(), Error> {
             context.render_literal("<div>")?;
 
@@ -75,9 +96,15 @@ fn target_example() {
 
             Ok(())
         }
+
+        fn builder() -> Self::Builder {
+            DummyBuilder::new()
+        }
     }
 
-    impl Template for Person<'_> {
+    impl<'a> Template for Person<'a> {
+        type Builder = DummyBuilder<Person<'a>>;
+
         fn render(&self, context: &mut RenderContext) -> Result<(), Error> {
             context.render_literal("<p>Name: ")?;
             context.render_expression(&self.name)?;
@@ -87,6 +114,10 @@ fn target_example() {
             context.render_expression(&self.children)?;
 
             Ok(())
+        }
+
+        fn builder() -> Self::Builder {
+            DummyBuilder::new()
         }
     }
 

@@ -1,6 +1,8 @@
 use proc_macro2::Span;
 
-use syn::{ext::IdentExt, parse::ParseStream, spanned::Spanned, Attribute, Ident, LitStr};
+use syn::{
+    ext::IdentExt, parse::ParseStream, spanned::Spanned, Attribute, Ident, ItemStruct, LitStr,
+};
 
 #[derive(Debug, Default)]
 pub(crate) struct TemplateOptions {
@@ -9,7 +11,19 @@ pub(crate) struct TemplateOptions {
 }
 
 impl TemplateOptions {
-    pub(crate) fn parse_attr(input: ParseStream) -> syn::Result<Self> {
+    pub(crate) fn from_struct(input: &ItemStruct) -> syn::Result<Self> {
+        let mut options = TemplateOptions::default();
+
+        for attr in input.attrs.iter().filter(|a| a.path().is_ident("template")) {
+            options.merge_attr(attr)?;
+        }
+
+        options.validate()?;
+
+        Ok(options)
+    }
+
+    fn parse_attr(input: ParseStream) -> syn::Result<Self> {
         let mut parsed = TemplateOptions::default();
         while !input.is_empty() {
             let lookahead = input.lookahead1();

@@ -4,6 +4,9 @@ mod escaper;
 mod renderable;
 mod template;
 
+#[cfg(feature = "derive")]
+pub mod derive;
+
 pub use children::*;
 pub use context::*;
 pub use escaper::*;

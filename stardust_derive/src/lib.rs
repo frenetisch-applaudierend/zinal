@@ -11,6 +11,7 @@ use syn::ItemStruct;
 
 mod derive;
 mod emit;
+mod generics;
 mod opts;
 mod parser;
 
@@ -19,7 +20,7 @@ pub fn derive_template(input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
     let input = parse_macro_input!(input as ItemStruct);
 
-    match derive::derive_template(input) {
+    match derive::derive(input) {
         Ok(stream) => stream.into(),
         Err(err) => err.to_compile_error().into(),
     }

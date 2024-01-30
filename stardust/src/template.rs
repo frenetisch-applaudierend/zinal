@@ -1,6 +1,8 @@
 use crate::RenderContext;
 
-pub trait Template {
+pub trait Template: Sized {
+    type Builder;
+
     fn render(&self, context: &mut RenderContext) -> Result<(), std::fmt::Error>;
 
     fn render_to_string(&self) -> Result<String, std::fmt::Error> {
@@ -11,4 +13,6 @@ pub trait Template {
 
         Ok(buf)
     }
+
+    fn builder() -> Self::Builder;
 }
