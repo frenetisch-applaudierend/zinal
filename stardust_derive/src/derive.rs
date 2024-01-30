@@ -187,7 +187,7 @@ fn derive_builder(input: &ItemStruct, generics: &TemplateGenerics) -> Result<Tok
         
         quote! {
             pub fn #ident(self, value: #ty) -> #builder_ident #builder_args {
-                todo!()
+                #builder_ident(self.0.set::<#prop>(|values| { values.#ident = ::stardust::derive::Property::Set(value); }))
             }
         }
     }
