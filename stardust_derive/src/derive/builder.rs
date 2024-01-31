@@ -1,11 +1,15 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::ToTokens;
 use syn::{
-    punctuated::Punctuated, token::Comma, AngleBracketedGenericArguments, Field, FieldsNamed,
-    GenericArgument, GenericParam, Generics, ItemStruct, Type, WhereClause,
+    punctuated::Punctuated, token::Comma, AngleBracketedGenericArguments, GenericArgument,
+    GenericParam, Generics, ItemStruct, Type, WhereClause,
 };
 
-use super::{properties::TemplateProperties, values::TemplateValues};
+use super::{
+    fields::{TemplateField, TemplateFields},
+    properties::TemplateProperties,
+    values::TemplateValues,
+};
 
 pub struct TemplateBuilder<'a> {
     pub ident: Ident,
@@ -13,15 +17,15 @@ pub struct TemplateBuilder<'a> {
     args_template: Punctuated<GenericArgument, Comma>,
     template_ident: &'a Ident,
     template_generics: &'a Generics,
-    template_fields: Option<&'a FieldsNamed>,
-    values: &'a TemplateValues,
+    template_fields: &'a TemplateFields,
+    values: &'a TemplateValues<'a>,
     properties: &'a TemplateProperties,
 }
 
 impl<'a> TemplateBuilder<'a> {
     pub fn from_template(
         template: &'a ItemStruct,
-        fields: Option<&'a FieldsNamed>,
+        fields: &'a TemplateFields,
         values: &'a TemplateValues,
         properties: &'a TemplateProperties,
     ) -> Self {
@@ -87,10 +91,11 @@ impl<'a> TemplateBuilder<'a> {
         let ident = &self.ident;
         let (impl_generics, ty_generics, where_clause) = self.generics.split_for_impl();
 
-        let setters = match self.template_fields {
-            Some(fs) => fs.named.iter().map(|f| self.generate_setter(f)).collect(),
-            None => Vec::new(),
-        };
+        let setters = self
+            .template_fields
+            .iter()
+            .map(|f| self.generate_setter(f))
+            .collect::<Vec<_>>();
 
         let build_method = self.generate_build_method();
 
@@ -107,9 +112,9 @@ impl<'a> TemplateBuilder<'a> {
         }
     }
 
-    fn generate_setter(&self, field: &Field) -> TokenStream {
+    fn generate_setter(&self, field: &TemplateField) -> TokenStream {
         let builder_ident = &self.ident;
-        let field_ident = field.ident.as_ref().expect("Retrieved from FieldsNamed");
+        let field_ident = &field.ident;
         let field_ty = &field.ty;
         let prop = self.properties.prop_ty(field_ident);
 
@@ -130,8 +135,12 @@ impl<'a> TemplateBuilder<'a> {
         let mut args = Punctuated::new();
         let mut predicates = Punctuated::new();
 
-        for field in self.values.fields.named.iter() {
-            let prop_ident = field.ident.as_ref().expect("Should be a named field");
+        for field in self.template_fields.iter() {
+            if field.optionality.is_optional() {
+                continue;
+            }
+
+            let prop_ident = &field.ident;
             let tail_ident = Ident::new(&format!("Tail_{}", prop_ident), Span::mixed_site());
             let prop_ty = self.properties.prop_ty(prop_ident);
 
@@ -163,17 +172,12 @@ impl<'a> TemplateBuilder<'a> {
 
         let fields = self
             .template_fields
-            .map(|fields| {
-                fields
-                    .named
-                    .iter()
-                    .map(|f| {
-                        let field_ident = &f.ident;
-                        quote!(#field_ident: self.0.values.#field_ident.expect("Value must be set"))
-                    })
-                    .collect::<Vec<_>>()
+            .iter()
+            .map(|f| {
+                let field_ident = &f.ident;
+                quote!(#field_ident: self.0.values.#field_ident.expect("Value must be set"))
             })
-            .unwrap_or_default();
+            .collect::<Vec<_>>();
 
         quote! {
             pub fn build #build_params (self) -> #template_ident #template_generics #where_clause {

@@ -1,6 +1,8 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::ToTokens;
-use syn::{punctuated::Punctuated, token::Brace, FieldsNamed, ItemStruct, Type};
+use syn::{ItemStruct, Type};
+
+use super::fields::TemplateFields;
 
 pub struct TemplateProperties {
     pub mod_ident: Ident,
@@ -8,20 +10,10 @@ pub struct TemplateProperties {
 }
 
 impl TemplateProperties {
-    pub fn from_template(template: &ItemStruct, fields: Option<&FieldsNamed>) -> Self {
-        let default_fields = FieldsNamed {
-            brace_token: Brace::default(),
-            named: Punctuated::new(),
-        };
-        let fields = fields.unwrap_or(&default_fields);
-
+    pub fn from_template(template: &ItemStruct, fields: &TemplateFields) -> Self {
         Self {
             mod_ident: super::generated_ident(template, "Properties"),
-            properties: fields
-                .named
-                .iter()
-                .map(|f| f.ident.clone().expect("Retrieved from FieldsNamed"))
-                .collect(),
+            properties: fields.iter().map(|f| f.ident.clone()).collect(),
         }
     }
 

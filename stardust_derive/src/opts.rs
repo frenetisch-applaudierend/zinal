@@ -35,7 +35,7 @@ impl TemplateOptions {
                 parsed.set_content(content.value(), content.span())?;
             } else if lookahead.peek(Ident::peek_any) {
                 // template(x = "...")
-                // where x could be path, content, content_type
+                // where x could be path or content
                 // we need to parse Ident '=' LitStr
 
                 let key = input.call(Ident::parse_any).expect("Lookahead");

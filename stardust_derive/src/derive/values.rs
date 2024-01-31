@@ -1,55 +1,51 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::ToTokens;
-use syn::{
-    punctuated::Punctuated, token::Brace, Field, FieldMutability, FieldsNamed, Generics,
-    ItemStruct, Type, Visibility,
-};
+use syn::{Field, FieldMutability, FieldsNamed, Generics, ItemStruct, Type, Visibility};
 
-pub struct TemplateValues {
+use crate::derive::fields::Optionality;
+
+use super::fields::TemplateFields;
+
+pub struct TemplateValues<'a> {
     pub ident: Ident,
     pub generics: Generics,
-    pub fields: FieldsNamed,
+    pub values_fields: FieldsNamed,
+    template_fields: &'a TemplateFields,
 }
 
-impl TemplateValues {
-    pub fn from_template(template: &ItemStruct, fields: Option<&FieldsNamed>) -> Self {
-        let fields = match fields {
-            Some(fs) => FieldsNamed {
-                brace_token: Brace::default(),
-                named: fs
-                    .named
-                    .iter()
-                    .map(|f| {
-                        let orig_ty = &f.ty;
+impl<'a> TemplateValues<'a> {
+    pub fn from_template(template: &ItemStruct, fields: &'a TemplateFields) -> Self {
+        let values_fields = FieldsNamed {
+            brace_token: Default::default(),
+            named: fields
+                .iter()
+                .map(|f| {
+                    let orig_ty = &f.ty;
 
-                        Field {
-                            attrs: Vec::new(),
-                            vis: Visibility::Inherited,
-                            mutability: FieldMutability::None,
-                            ident: f.ident.clone(),
-                            colon_token: Default::default(),
-                            ty: parse_quote!(::std::option::Option<#orig_ty>),
-                        }
-                    })
-                    .collect(),
-            },
-            None => FieldsNamed {
-                brace_token: Brace::default(),
-                named: Punctuated::new(),
-            },
+                    Field {
+                        attrs: Vec::new(),
+                        vis: Visibility::Inherited,
+                        mutability: FieldMutability::None,
+                        ident: Some(f.ident.clone()),
+                        colon_token: Default::default(),
+                        ty: parse_quote!(::std::option::Option<#orig_ty>),
+                    }
+                })
+                .collect(),
         };
 
         Self {
             ident: super::generated_ident(template, "Values"),
             generics: template.generics.clone(),
-            fields,
+            values_fields,
+            template_fields: fields,
         }
     }
 
     pub fn generate_decl(&self) -> TokenStream {
         let ident = &self.ident;
         let generics = &self.generics;
-        let fields = &self.fields;
+        let fields = &self.values_fields;
 
         quote! {
             #[doc(hidden)]
@@ -63,12 +59,15 @@ impl TemplateValues {
         let (impl_generics, ty_generics, where_clause) = self.generics.split_for_impl();
 
         let fields = self
-            .fields
-            .named
+            .template_fields
             .iter()
             .map(|f| {
                 let ident = &f.ident;
-                quote!(#ident: ::std::option::Option::None)
+                let value = match &f.optionality {
+                    Optionality::Required => quote!(::std::option::Option::None),
+                    Optionality::Optional(expr) => quote!(::std::option::Option::Some(#expr)),
+                };
+                quote!(#ident: #value)
             })
             .collect::<Vec<_>>();
 
@@ -84,11 +83,6 @@ impl TemplateValues {
         }
     }
 
-    pub fn initial_token_ty(&self) -> Type {
-        // TODO: Add logic once we support default params
-        parse_quote!(())
-    }
-
     pub fn ty_ref(&self) -> Type {
         let ident = &self.ident;
         let (_, ty_generics, _) = self.generics.split_for_impl();
@@ -97,7 +91,7 @@ impl TemplateValues {
     }
 }
 
-impl ToTokens for TemplateValues {
+impl ToTokens for TemplateValues<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.generate_decl().to_tokens(tokens);
         self.generate_default_impl().to_tokens(tokens);
