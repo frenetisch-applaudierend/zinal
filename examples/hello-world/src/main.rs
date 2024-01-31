@@ -1,14 +1,15 @@
 use stardust::{Children, Renderable, Template};
 
 #[derive(Template)]
-#[template("<div><Person name='Fred' age={2}><p>Lorem ipsum...</p></Person></div>")]
+#[template("<div><Person name='Fred'><p>Lorem ipsum...</p></Person></div>")]
 struct Info;
 
 #[derive(Template)]
-#[template("<p>Name: {self.name}</p><p>Age: {self.age}</p>{self.children}")]
-struct Person<'a, T: Renderable> {
+#[template("<p>Name: {self.name}</p><p>Minor: {self.minor}</p>{self.children}")]
+struct Person<'a> {
     name: &'a str,
-    age: T,
+    #[optional]
+    minor: bool,
     children: Children<'a>,
 }
 

@@ -118,7 +118,7 @@ impl<'a> TemplateBuilder<'a> {
 
         quote! {
             pub fn #field_ident(self, value: #field_ty) -> #builder_ident #builder_args {
-                #builder_ident(self.0.set::<#prop>(|values| { values.#field_ident = ::stardust::derive::Property::Set(value); }))
+                #builder_ident(self.0.set::<#prop>(|values| { values.#field_ident = ::std::option::Option::Some(value); }))
             }
         }
     }
@@ -161,9 +161,25 @@ impl<'a> TemplateBuilder<'a> {
             None
         };
 
+        let fields = self
+            .template_fields
+            .map(|fields| {
+                fields
+                    .named
+                    .iter()
+                    .map(|f| {
+                        let field_ident = &f.ident;
+                        quote!(#field_ident: self.0.values.#field_ident.expect("Value must be set"))
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
         quote! {
             pub fn build #build_params (self) -> #template_ident #template_generics #where_clause {
-                todo!()
+                #template_ident {
+                    #(#fields),*
+                }
             }
         }
     }

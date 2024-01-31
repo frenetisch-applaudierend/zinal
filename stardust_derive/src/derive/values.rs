@@ -28,7 +28,7 @@ impl TemplateValues {
                             mutability: FieldMutability::None,
                             ident: f.ident.clone(),
                             colon_token: Default::default(),
-                            ty: parse_quote!(::stardust::derive::Property<#orig_ty>),
+                            ty: parse_quote!(::std::option::Option<#orig_ty>),
                         }
                     })
                     .collect(),
@@ -55,7 +55,6 @@ impl TemplateValues {
             #[doc(hidden)]
             #[allow(non_camel_case_types)]
             struct #ident #generics #fields
-
         }
     }
 
@@ -63,11 +62,23 @@ impl TemplateValues {
         let ident = &self.ident;
         let (impl_generics, ty_generics, where_clause) = self.generics.split_for_impl();
 
+        let fields = self
+            .fields
+            .named
+            .iter()
+            .map(|f| {
+                let ident = &f.ident;
+                quote!(#ident: ::std::option::Option::None)
+            })
+            .collect::<Vec<_>>();
+
         quote! {
             #[automatically_derived]
             impl #impl_generics ::std::default::Default for #ident #ty_generics #where_clause {
                 fn default() -> Self {
-                    todo!()
+                    Self {
+                        #(#fields),*
+                    }
                 }
             }
         }
