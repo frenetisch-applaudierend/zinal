@@ -2,7 +2,7 @@ use stardust::{Children, Template};
 
 #[derive(Template)]
 #[template("<div><Person name='Fred'><p>Lorem ipsum...</p></Person></div>")]
-struct Info;
+pub struct Info;
 
 #[derive(Template)]
 #[template("<p>Name: {self.name}</p><p>Minor: {self.minor}</p>{self.children}")]

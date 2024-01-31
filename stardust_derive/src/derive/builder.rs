@@ -83,7 +83,7 @@ impl<'a> TemplateBuilder<'a> {
         quote! {
             #[doc(hidden)]
             #[allow(non_camel_case_types)]
-            struct #ident #generics (::stardust::builder::TemplateBuilder<#values, __stardust_Token>);
+            pub struct #ident #generics (::stardust::builder::TemplateBuilder<#values, __stardust_Token>);
         }
     }
 
