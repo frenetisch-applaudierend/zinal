@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 mod children;
 mod context;
 mod escaper;
