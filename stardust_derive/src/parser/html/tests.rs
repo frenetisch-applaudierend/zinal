@@ -8,14 +8,14 @@ use super::HtmlParser;
 fn top_level_escapes() {
     let mut parser = HtmlParser;
 
-    let input = Input::new("{{<##");
+    let input = Input::new("%{{%<#");
     let result = parser.parse(input);
 
     assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
     assert_eq!(
         result.unwrap(),
         vec![
-            Item::Literal(Cow::from("{")),
+            Item::Literal(Cow::from("{{")),
             Item::Literal(Cow::from("<#"))
         ]
     );
@@ -39,7 +39,7 @@ fn literal_plain() {
 fn expression() {
     let mut parser = HtmlParser;
 
-    let input = Input::new("{self.name.to_ascii_uppercase()}");
+    let input = Input::new("{{self.name.to_ascii_uppercase()}}");
     let result = parser.parse(input);
 
     assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
@@ -55,13 +55,13 @@ fn expression() {
 fn expression_with_escape_and_whitespace() {
     let mut parser = HtmlParser;
 
-    let input = Input::new("{ format!(\"{}}\", foo) }");
+    let input = Input::new("{{ format!(\"{{ {} %}}\", foo) }}");
     let result = parser.parse(input);
 
     assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
     assert_eq!(
         result.unwrap(),
-        vec![Item::Expression(Cow::from("format!(\"{}\", foo)"))]
+        vec![Item::Expression(Cow::from("format!(\"{{ {} }}\", foo)"))]
     );
 }
 
@@ -69,7 +69,7 @@ fn expression_with_escape_and_whitespace() {
 fn expression_unterminated() {
     let mut parser = HtmlParser;
 
-    let input = Input::new("{ format!(\"{}}\", foo) ");
+    let input = Input::new("{{ format!(\"{{ {} %}}\", foo) ");
     let result = parser.parse(input);
 
     assert!(result.is_err(), "Unexpectedly succeeded");
@@ -79,7 +79,7 @@ fn expression_unterminated() {
 fn literal_with_expression() {
     let mut parser = HtmlParser;
 
-    let input = Input::new("<div>{self.name.to_ascii_uppercase()}</div>");
+    let input = Input::new("<div>{{self.name.to_ascii_uppercase()}}</div>");
     let result = parser.parse(input);
 
     assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
@@ -97,7 +97,7 @@ fn literal_with_expression() {
 fn expression_then_literal() {
     let mut parser = HtmlParser;
 
-    let input = Input::new("{self.name} is here");
+    let input = Input::new("{{self.name}} is here");
     let result = parser.parse(input);
 
     assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
@@ -130,7 +130,7 @@ fn plain_statement() {
 fn plain_statement_with_escape() {
     let mut parser = HtmlParser;
 
-    let input = Input::new("<# println!(\"Hello, <# Nested ##>\") #>");
+    let input = Input::new("<# println!(\"Hello, <# Nested %#>\") #>");
     let result = parser.parse(input);
 
     assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
@@ -182,7 +182,7 @@ fn keyword_statement_longform() {
 fn block_statement_for() {
     let mut parser = HtmlParser;
 
-    let input = Input::new("<# for name in self.names #>Hello, {name}<#end>");
+    let input = Input::new("<# for name in self.names #>Hello, {{name}}<#end>");
     let result = parser.parse(input);
 
     assert!(result.is_ok(), "Error in result: {:?}", result.unwrap_err());
@@ -234,13 +234,13 @@ fn block_statement_if() {
 fn comment() {
     let mut parser = HtmlParser;
 
-    let input = Input::new("<!-- Comment {expr} <#end> -->");
+    let input = Input::new("<!-- Comment {{expr}} <#end> -->");
 
     let result = parser.parse(input).expect("Should have parsed");
 
     assert_eq!(
         result,
-        vec![Item::Literal(Cow::from("<!-- Comment {expr} <#end> -->"))]
+        vec![Item::Literal(Cow::from("<!-- Comment {{expr}} <#end> -->"))]
     );
 }
 
@@ -267,7 +267,7 @@ fn child_template_with_args() {
     let mut parser = HtmlParser;
 
     let input = Input::new(
-        "<Child expr={self.name} lit_double=\"test double\" lit_single='test single' />",
+        "<Child expr={{self.name}} lit_double=\"test double\" lit_single='test single' />",
     );
     let result = parser.parse(input).expect("Should have parsed");
 
@@ -298,7 +298,7 @@ fn child_template_with_args() {
 fn child_template_with_args_and_body() {
     let mut parser = HtmlParser;
 
-    let input = Input::new("<Child expr={self.name}>Hello, World!</Child>");
+    let input = Input::new("<Child expr={{self.name}}>Hello, World!</Child>");
     let result = parser.parse(input).expect("Should have parsed");
 
     assert_eq!(

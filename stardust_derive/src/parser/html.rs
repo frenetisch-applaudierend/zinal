@@ -43,11 +43,11 @@ fn parse_template_item<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
 }
 
 fn parse_escape<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
-    if input.consume_lit("{{").is_some() {
-        return Ok(Some(Item::Literal(Cow::from("{"))));
+    if input.consume_lit("%{{").is_some() {
+        return Ok(Some(Item::Literal(Cow::from("{{"))));
     }
 
-    if input.consume_lit("<##").is_some() {
+    if input.consume_lit("%<#").is_some() {
         return Ok(Some(Item::Literal(Cow::from("<#"))));
     }
 
@@ -55,21 +55,25 @@ fn parse_escape<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
 }
 
 fn parse_expression<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
-    if input.consume_lit("{").is_none() {
+    if input.consume_lit("{{").is_none() {
         return Ok(None);
     }
 
     let mut content = Cow::<'src, str>::Borrowed("");
 
     loop {
-        let part = input.consume_until("}");
+        let part = input.consume_until_any("}%");
 
         append(&mut content, part.into_str());
 
-        if input.consume_lit("}}").is_some() {
-            append(&mut content, "}");
-        } else if input.consume_lit("}").is_some() {
+        if input.consume_lit("%}}").is_some() {
+            append(&mut content, "}}");
+        } else if input.consume_lit("}}").is_some() {
             break;
+        } else if input.consume_lit("}").is_some() {
+            append(&mut content, "}");
+        } else if input.consume_lit("%").is_some() {
+            append(&mut content, "%");
         } else {
             return Err(syn::Error::new(
                 Span::call_site(),
@@ -223,16 +227,18 @@ fn parse_statement<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
         let mut content = Cow::<'src, str>::Borrowed("");
 
         loop {
-            let part = input.consume_until("#");
+            let part = input.consume_until_any("#%");
 
             append(&mut content, part.into_str());
 
-            if input.consume_lit("##>").is_some() {
+            if input.consume_lit("%#>").is_some() {
                 append(&mut content, "#>");
             } else if input.consume_lit("#>").is_some() {
                 break;
             } else if input.consume_lit("#").is_some() {
                 append(&mut content, "#");
+            } else if input.consume_lit("%").is_some() {
+                append(&mut content, "%");
             } else {
                 return Err(syn::Error::new(Span::call_site(), "Unterminated statement"));
             }
@@ -476,7 +482,7 @@ fn parse_literal<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
         .consume_count(1)
         .expect("This method must not be called with an empty input");
 
-    let rest = input.consume_until_any("<{");
+    let rest = input.consume_until_any("<{%");
 
     let combined = input.combine(&[first, rest]).into_cow();
 

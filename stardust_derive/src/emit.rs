@@ -259,10 +259,11 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            __stardust_context.render_template(::module::Type {
-                expr: self.name,
-                lit: "Literal".into()
-            })?;
+            __stardust_context.render_template(::module::Type::builder()
+                .expr(self.name)
+                .lit("Literal".into())
+                .build()
+            )?;
         };
 
         assert_text(tokens, expected);
