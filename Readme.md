@@ -7,14 +7,15 @@
 It is also a HTML templating library for Rust programs, focussing on composability.
 
 > [!NOTE]
-> While functional, this library is still in an early stage. Bugs may occur, and documentation and error messages are lacking.
+> While functional, this library is still in an early stage. Bugs may occur, and documentation and
+> error messages are lacking. Breaking changes are to be expected.
 
 ## Features
 
 * Composable templates with an intuitive syntax similar to JSX
 * Embed arbitrary rust expressions and statements in your templates
 * Compile-time errors for missing or incorrect template arguments
-* Templates are built into the binary
+* Templates are built into the binary, no parsing at runtime necessary
 
 ## Installation
 
@@ -80,7 +81,7 @@ struct Hello<'a> {
 ```
 
 ...or reference a template file. Template files must be in a top level folder called `templates`
-but can be arbitrarily nested within.
+but can be freely nested within.
 
 ```rust
 #[derive(Template)]
@@ -107,10 +108,10 @@ struct Example;
 
 ```rust
 #[derive(Template)]
-#[template(content = "
+#[template(content = r#"
   <div>Hello, World!</div>
   <# println!("Rendering Example template...") #>
-")]
+"#)]
 struct Example;
 ```
 
