@@ -16,7 +16,7 @@ It is also a HTML templating library for Rust programs, focussing on composabili
 * Compile-time errors for missing or incorrect template arguments
 * Templates are built into the binary
 
-## Usage
+## Installation
 
 Add zinal as a dependency in your Cargo.toml:
 
@@ -25,7 +25,51 @@ Add zinal as a dependency in your Cargo.toml:
 zinal = "0.1"
 ```
 
-Define a template in code:
+## Examples
+
+The following example shows some features of Zinal, like composing templates and embedding a rust for loop.
+
+```rust
+use zinal::*;
+
+#[derive(Template)]
+#[template(content = "
+  <div>We greet the following people:</div>
+  <ul>
+  <#for name in &self.names #>
+    <Person name={{name}} />
+  <#end>
+  </ul>
+")]
+struct Greetings {
+  names: Vec<String>
+}
+
+#[derive(Template)]
+#[template(content = "<li><p>{{self.name}}</p></li>")]
+struct Person<'a> {
+  name: &'a str,
+}
+
+let greetings = Greetings {
+  names: vec!["Mary".to_owned(), "John".to_owned(), "Kate".to_owned(), "Agnes".to_owned()]
+};
+
+fn main() {
+  // Prints (possibly with some insignificant whitespace differences):
+  // <div>We greet the following people:</div>
+  // <ul>
+  // <li><p>Mary</p></li>
+  // <li><p>John</p></li>
+  // <li><p>Kate</p></li>
+  // <li><p>Agnes</p></li>
+  // </ul>
+  println!("{}", greetings.render_to_string().unwrap()); 
+}
+
+```
+
+You can either define a template directly in code...
 
 ```rust
 #[derive(Template)]
@@ -33,49 +77,41 @@ Define a template in code:
 struct Hello<'a> {
   name: &'a str
 }
-
-fn main() {
-  let hello = Hello { name: "Zinal" };
-  println!(hello.render_to_string().unwrap());
-}
-
-// Prints
-// <div>Hello, Zinal!</div>
 ```
 
-Or reference a template file:
-
-```html
-<!-- File: templates/hello.html -->
-<div>Hello, {{self.name}}!</div>
-```
+...or reference a template file. Template files must be in a top level folder called `templates`
+but can be arbitrarily nested within.
 
 ```rust
 #[derive(Template)]
-#[template(path = "hello.html")]
+#[template(path = "examples/hello.html")]
 struct Hello<'a> {
   name: &'a str
 }
-
-fn main() {
-  let hello = Hello { name: "Zinal" };
-  println!(hello.render_to_string().unwrap());
-}
-
-// Prints
-// <div>Hello, Zinal!</div>
 ```
 
-You can use arbitrary rust expressions in your templates:
+```html
+<!-- File: templates/examples/hello.html -->
+<div>Hello, {{self.name}}!</div>
+```
+
+You can use arbitrary rust expressions in your templates...
 
 ```rust
 #[derive(Template)]
 #[template(content = "<div>2 + 2 = {{2 + 2}}; {{ "Hello".to_uppercase() }}")]
 struct Example;
+```
 
-fn main() {
-  println!(Example.render_to_string().unwrap());
-}
+...as well as embed statements that get executed when the template renders.
+
+```rust
+#[derive(Template)]
+#[template(content = "
+  <div>Hello, World!</div>
+  <# println!("Rendering Example template...") #>
+")]
+struct Example;
 ```
 
 For more examples see the [examples](./examples) folder. For more information about the template syntax see [the syntax reference](./documentation/Syntax.md).
