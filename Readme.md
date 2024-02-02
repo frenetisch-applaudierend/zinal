@@ -11,7 +11,7 @@ It is also a HTML templating library for Rust programs, focussing on composabili
 
 ## Features
 
-* Composable templates, similar to JSX
+* Composable templates with an intuitive syntax similar to JSX
 * Embed arbitrary rust expressions and statements in your templates
 * Compile-time errors for missing or incorrect template arguments
 * Templates are built into the binary
@@ -43,10 +43,10 @@ fn main() {
 // <div>Hello, Zinal!</div>
 ```
 
-Or reference an external template:
+Or reference a template file:
 
-`templates/hello.html`:
 ```html
+<!-- File: templates/hello.html -->
 <div>Hello, {{self.name}}!</div>
 ```
 
@@ -65,3 +65,17 @@ fn main() {
 // Prints
 // <div>Hello, Zinal!</div>
 ```
+
+You can use arbitrary rust expressions in your templates:
+
+```rust
+#[derive(Template)]
+#[template(content = "<div>2 + 2 = {{2 + 2}}; {{ "Hello".to_uppercase() }}")]
+struct Example;
+
+fn main() {
+  println!(Example.render_to_string().unwrap());
+}
+```
+
+For more examples see the [examples](./examples) folder. For more information about the template syntax see [the syntax reference](./documentation/Syntax.md).
