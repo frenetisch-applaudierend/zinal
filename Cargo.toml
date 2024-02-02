@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-  "stardust",
-  "stardust_derive",
+  "zinal",
+  "zinal_derive",
 ]
 exclude = [
   "examples"

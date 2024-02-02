@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-stardust = { path = "../../stardust", version = "0.1.0", features = ["derive"] }
+zinal = { path = "../../zinal", version = "0.1.0", features = ["derive"] }

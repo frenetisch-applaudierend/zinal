@@ -20,13 +20,13 @@ impl Emit for Item<'_> {
     fn emit(self) -> Result<TokenStream, Error> {
         match self {
             Item::Literal(s) => Ok(quote! {
-                __stardust_context.render_literal(#s)?;
+                __zinal_context.render_literal(#s)?;
             }),
 
             Item::Expression(expr) => {
                 let expr = syn::parse_str::<syn::Expr>(expr.as_ref())?;
                 Ok(quote! {
-                    __stardust_context.render_expression(&#expr)?;
+                    __zinal_context.render_expression(&#expr)?;
                 })
             }
 
@@ -66,7 +66,7 @@ impl Emit for Item<'_> {
                 if !children.is_empty() {
                     let children = Item::emit_all(children)?;
                     let tokens = quote! {
-                        .children(::stardust::Children::new(&|__stardust_context| {
+                        .children(::zinal::Children::new(&|__zinal_context| {
                             #(#children)*
 
                             Ok(())
@@ -80,7 +80,7 @@ impl Emit for Item<'_> {
                 };
 
                 Ok(quote! {
-                    __stardust_context.render_template(#template)?;
+                    __zinal_context.render_template(#template)?;
                 })
             }
         }
@@ -144,7 +144,7 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            __stardust_context.render_literal("Hello, World!")?;
+            __zinal_context.render_literal("Hello, World!")?;
         };
 
         assert_text(tokens, expected);
@@ -157,7 +157,7 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            __stardust_context.render_expression(&self.name.to_upper())?;
+            __zinal_context.render_expression(&self.name.to_upper())?;
         };
 
         assert_text(tokens, expected);
@@ -174,9 +174,9 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            __stardust_context.render_literal("Hello, ")?;
-            __stardust_context.render_expression(&self.name.to_upper())?;
-            __stardust_context.render_literal("!")?;
+            __zinal_context.render_literal("Hello, ")?;
+            __zinal_context.render_expression(&self.name.to_upper())?;
+            __zinal_context.render_literal("!")?;
         };
 
         assert_text(tokens, expected);
@@ -194,7 +194,7 @@ mod tests {
 
         let expected = quote! {
             if self.age > 18 {
-                __stardust_context.render_literal("Hello, World!")?;
+                __zinal_context.render_literal("Hello, World!")?;
             }
         };
 
@@ -213,7 +213,7 @@ mod tests {
 
         let expected = quote! {
             loop {
-                __stardust_context.render_literal("Hello, World!")?;
+                __zinal_context.render_literal("Hello, World!")?;
             }
         };
 
@@ -232,7 +232,7 @@ mod tests {
 
         let expected = quote! {
             for name in self.names {
-                __stardust_context.render_literal("Hello, World!")?;
+                __zinal_context.render_literal("Hello, World!")?;
             }
         };
 
@@ -259,7 +259,7 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            __stardust_context.render_template(::module::Type::builder()
+            __zinal_context.render_template(::module::Type::builder()
                 .expr(self.name)
                 .lit("Literal".into())
                 .build()

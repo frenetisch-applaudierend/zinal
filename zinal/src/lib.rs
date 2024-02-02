@@ -16,7 +16,7 @@ pub use template::*;
 
 #[cfg(feature = "derive")]
 #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
-pub use stardust_derive::Template;
+pub use zinal_derive::Template;
 
 #[cfg(test)]
 mod tests;

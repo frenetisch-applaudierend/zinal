@@ -32,7 +32,7 @@ impl<'a> TemplateBuilder<'a> {
         let mut generics = template.generics.clone();
         generics
             .params
-            .push(GenericParam::Type(parse_quote!(__stardust_Token)));
+            .push(GenericParam::Type(parse_quote!(__zinal_Token)));
 
         let mut args_template = Punctuated::new();
         for param in template.generics.params.iter() {
@@ -83,7 +83,7 @@ impl<'a> TemplateBuilder<'a> {
         quote! {
             #[doc(hidden)]
             #[allow(non_camel_case_types)]
-            pub struct #ident #generics (::stardust::builder::TemplateBuilder<#values, __stardust_Token>);
+            pub struct #ident #generics (::zinal::builder::TemplateBuilder<#values, __zinal_Token>);
         }
     }
 
@@ -119,7 +119,7 @@ impl<'a> TemplateBuilder<'a> {
         let prop = self.properties.prop_ty(field_ident);
 
         let builder_args = self
-            .generic_args(parse_quote!(::stardust::builder::WithProperty<#prop, __stardust_Token>));
+            .generic_args(parse_quote!(::zinal::builder::WithProperty<#prop, __zinal_Token>));
 
         quote! {
             pub fn #field_ident(self, value: #field_ty) -> #builder_ident #builder_args {
@@ -146,7 +146,7 @@ impl<'a> TemplateBuilder<'a> {
 
             args.push(parse_quote!(#tail_ident));
             predicates.push(
-                parse_quote!(__stardust_Token: ::stardust::builder::HasProperty<#prop_ty, #tail_ident>),
+                parse_quote!(__zinal_Token: ::zinal::builder::HasProperty<#prop_ty, #tail_ident>),
             );
         }
 

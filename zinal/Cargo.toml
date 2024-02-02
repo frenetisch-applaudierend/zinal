@@ -1,0 +1,13 @@
+[package]
+name = "zinal"
+version = "0.1.0"
+edition = "2021"
+workspace = ".."
+
+[dependencies]
+zinal_derive = { path = "../zinal_derive", version = "0.1.0", optional = true }
+
+[features]
+default = ["derive"]
+derive = ["dep:zinal_derive"]
+axum = ["zinal_derive?/axum"]

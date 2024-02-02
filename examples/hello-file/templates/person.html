@@ -1,4 +1,4 @@
-<p>{self.name}</p>
+<p>{{self.name}}</p>
 
 <#if self.age >= 18 #>
   <p>Adult</p>
@@ -8,5 +8,5 @@
 
 <p>Children:</p>
 <#for child in &self.children #>
-  <Child name={child.as_str()} />
+  <Child name={{child.as_str()}} />
 <#end>

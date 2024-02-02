@@ -1,4 +1,4 @@
-use stardust::Template;
+use zinal::Template;
 
 #[derive(Template)]
 #[template(path = "person.html")]
@@ -9,7 +9,7 @@ struct Person {
 }
 
 #[derive(Template)]
-#[template("<p>Name: {self.name}</p>")]
+#[template("<p>Name: {{self.name}}</p>")]
 struct Child<'a> {
     name: &'a str,
 }

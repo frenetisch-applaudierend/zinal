@@ -58,10 +58,10 @@ fn derive_template_impl(
     expanded.extend(quote! {
 
         #[automatically_derived]
-        impl #impl_generics ::stardust::Template for #ident #ty_generics #where_clause {
+        impl #impl_generics ::zinal::Template for #ident #ty_generics #where_clause {
             type Builder = #builder_ty #builder_args; 
             
-            fn render(&self, __stardust_context: &mut ::stardust::RenderContext) -> ::std::result::Result<(), ::std::fmt::Error> {
+            fn render(&self, __zinal_context: &mut ::zinal::RenderContext) -> ::std::result::Result<(), ::std::fmt::Error> {
                 #(#items)*
 
                 Ok(())
@@ -89,7 +89,7 @@ fn derive_template_impl(
 }
 
 pub(crate) fn generated_ident(template: &ItemStruct, name: &str) -> Ident {
-    Ident::new(&format!("__stardust_generated_{}_{}", template.ident, name), template.ident.span())
+    Ident::new(&format!("__zinal_generated_{}_{}", template.ident, name), template.ident.span())
 }
 
 fn read_content(options: &TemplateOptions) -> Result<String, Error> {
