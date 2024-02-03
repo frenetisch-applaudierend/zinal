@@ -1,4 +1,4 @@
-# zinal
+# Zinal HTML Templating Library
 
 ![Maintenance](https://img.shields.io/badge/maintenance-experimental-blue.svg)
 
@@ -116,3 +116,9 @@ struct Example;
 ```
 
 For more examples see the [examples](./examples) folder. For more information about the template syntax see [the syntax reference](./documentation/Syntax.md).
+
+## License
+
+Zinal is distributed under the terms the MIT license.
+
+See [LICENSE](./LICENSE) for details.
