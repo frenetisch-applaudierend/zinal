@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::OnceLock};
 pub struct HtmlEscaper;
 
 impl HtmlEscaper {
-    pub fn escape_string<'a>(&self, value: std::borrow::Cow<'a, str>) -> std::borrow::Cow<'a, str> {
+    pub fn escape<'a>(&self, value: std::borrow::Cow<'a, str>) -> std::borrow::Cow<'a, str> {
         let mut escaped = String::new();
         let escapes =
             ESCAPES.get_or_init(|| HashMap::from([('<', "&lt;"), ('>', "&gt;"), ('&', "&amp;")]));
@@ -44,7 +44,7 @@ mod tests {
     fn escaper_unescaped() {
         let input = Cow::from("This does not need to be escaped");
 
-        let output = HtmlEscaper.escape_string(input);
+        let output = HtmlEscaper.escape(input);
 
         assert_eq!(
             output,
@@ -56,7 +56,7 @@ mod tests {
     fn escaper_escaped() {
         let input = Cow::from("<&>");
 
-        let output = HtmlEscaper.escape_string(input);
+        let output = HtmlEscaper.escape(input);
 
         assert_eq!(output, Cow::<str>::Owned(String::from("&lt;&amp;&gt;")));
     }
@@ -65,7 +65,7 @@ mod tests {
     fn escaper_mixed() {
         let input = Cow::from("< hello & world >");
 
-        let output = HtmlEscaper.escape_string(input);
+        let output = HtmlEscaper.escape(input);
 
         assert_eq!(
             output,
