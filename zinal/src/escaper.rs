@@ -1,8 +1,12 @@
 use std::{collections::HashMap, sync::OnceLock};
 
+/// An escaper that escapes strings to be safely included in HTML content.
 pub struct HtmlEscaper;
 
 impl HtmlEscaper {
+    /// Escape the given value to be HTML safe.
+    ///
+    /// If the value is already safe, it is returned unchanged.
     pub fn escape<'a>(&self, value: std::borrow::Cow<'a, str>) -> std::borrow::Cow<'a, str> {
         let mut escaped = String::new();
         let escapes =

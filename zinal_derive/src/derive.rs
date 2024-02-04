@@ -61,7 +61,7 @@ fn derive_template_impl(
         impl #impl_generics ::zinal::Template for #ident #ty_generics #where_clause {
             type Builder = #builder_ty #builder_args; 
             
-            fn render(&self, __zinal_context: &mut ::zinal::RenderContext) -> ::std::result::Result<(), ::std::fmt::Error> {
+            fn render(self, __zinal_context: &mut ::zinal::RenderContext) -> ::std::result::Result<(), ::std::fmt::Error> {
                 #(#items)*
 
                 Ok(())

@@ -1,4 +1,6 @@
-use crate::RenderContext;
+use std::any::Any;
+
+use crate::{ParamProvider, RenderContext};
 
 /// Trait implemented by types representing a template.
 ///
@@ -44,9 +46,10 @@ pub trait Template: Sized {
     /// * for each attribute the template should support, there
     ///   needs to be a setter method with the same name, and taking
     ///   a value of the attribute type.
-    /// * a method named build() that creates and returns the template
-    ///   with the previously set properties. The build method should
-    ///   require that all required properties were previously set.
+    /// * a method named build(context: RenderContext) that creates and
+    ///   returns the template with the previously set properties. The build
+    ///   method should require that all required properties were previously
+    ///   set.
     ///
     /// Usually this will be implemented automatically by deriving
     /// the Template trait. When implementing the trait manually,
@@ -63,20 +66,25 @@ pub trait Template: Sized {
     ///
     /// This function will return an error if any of the RenderContexts render_* methods fail.
     /// Usually because the underlying std::fmt::Write implementation generates an error.
-    fn render(&self, context: &mut RenderContext) -> Result<(), std::fmt::Error>;
+    fn render(self, context: &mut RenderContext) -> Result<(), std::fmt::Error>;
 
     /// Render this template to a string using the render() method.
     ///
     /// # Errors
     ///
     /// This function will return an error if the render() method returns an error.
-    fn render_to_string(&self) -> Result<String, std::fmt::Error> {
+    fn render_to_string(self) -> Result<String, std::fmt::Error> {
         let mut buf = String::new();
         let mut context = RenderContext::new(&mut buf);
 
         self.render(&mut context)?;
 
         Ok(buf)
+    }
+
+    /// Attach a parameter to the context when rendering this template.
+    fn with_context_param<P: Any>(self, param: P) -> impl Template {
+        ParamProvider::new(self, param)
     }
 
     /// Create and return a builder for this template.

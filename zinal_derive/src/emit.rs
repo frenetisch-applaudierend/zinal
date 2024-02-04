@@ -76,11 +76,14 @@ impl Emit for Item<'_> {
                 }
 
                 let template = quote! {
-                    #ty::builder() #(#arguments)* .build()
+                    #ty::builder() #(#arguments)* .build(__zinal_context)
                 };
 
                 Ok(quote! {
-                    __zinal_context.render_template(#template)?;
+                    {
+                        let template = #template;
+                        __zinal_context.render_template(template)?;
+                    }
                 })
             }
         }
@@ -262,7 +265,7 @@ mod tests {
             __zinal_context.render_template(::module::Type::builder()
                 .expr(self.name)
                 .lit("Literal".into())
-                .build()
+                .build(__zinal_context)
             )?;
         };
 

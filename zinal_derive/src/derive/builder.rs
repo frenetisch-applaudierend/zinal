@@ -118,8 +118,8 @@ impl<'a> TemplateBuilder<'a> {
         let field_ty = &field.ty;
         let prop = self.properties.prop_ty(field_ident);
 
-        let builder_args = self
-            .generic_args(parse_quote!(::zinal::builder::WithProperty<#prop, __zinal_Token>));
+        let builder_args =
+            self.generic_args(parse_quote!(::zinal::builder::WithProperty<#prop, __zinal_Token>));
 
         quote! {
             pub fn #field_ident(self, value: #field_ty) -> #builder_ident #builder_args {
@@ -180,7 +180,7 @@ impl<'a> TemplateBuilder<'a> {
             .collect::<Vec<_>>();
 
         quote! {
-            pub fn build #build_params (self) -> #template_ident #template_generics #where_clause {
+            pub fn build #build_params (self, context: &mut ::zinal::RenderContext) -> #template_ident #template_generics #where_clause {
                 #template_ident {
                     #(#fields),*
                 }

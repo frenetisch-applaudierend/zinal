@@ -24,7 +24,7 @@ fn hello_world() {
     impl Template for HelloWorld<'_> {
         type Builder = DummyBuilder<Self>;
 
-        fn render(&self, context: &mut RenderContext) -> Result<(), std::fmt::Error> {
+        fn render(self, context: &mut RenderContext) -> Result<(), std::fmt::Error> {
             context.render_literal("Hello, ")?;
             context.render_renderable(self.name)?;
 
@@ -79,7 +79,7 @@ fn target_example() {
     impl Template for Info {
         type Builder = DummyBuilder<Info>;
 
-        fn render(&self, context: &mut RenderContext) -> Result<(), Error> {
+        fn render(self, context: &mut RenderContext) -> Result<(), Error> {
             context.render_literal("<div>")?;
 
             context.render_template(Person {
@@ -105,7 +105,7 @@ fn target_example() {
     impl<'a> Template for Person<'a> {
         type Builder = DummyBuilder<Person<'a>>;
 
-        fn render(&self, context: &mut RenderContext) -> Result<(), Error> {
+        fn render(self, context: &mut RenderContext) -> Result<(), Error> {
             context.render_literal("<p>Name: ")?;
             context.render_expression(&self.name)?;
             context.render_literal("</p><p>Age: ")?;
