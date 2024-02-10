@@ -64,16 +64,23 @@ impl Emit for Item<'_> {
                     .collect::<Result<Vec<_>, _>>()?;
 
                 if !children.is_empty() {
-                    let children = Item::emit_all(children)?;
                     let tokens = quote! {
-                        .children(::zinal::Children::new(&|__zinal_context| {
-                            #(#children)*
-
-                            Ok(())
-                        }))
+                        .children(::zinal::Children::new(&__zinal_children))
                     };
                     arguments.push(tokens);
                 }
+
+                let children_decl = if !children.is_empty() {
+                    let children = Item::emit_all(children)?;
+                    Some(quote! {
+                        let __zinal_children = |__zinal_context: &mut ::zinal::RenderContext| {
+                            #(#children)*
+                            Ok(())
+                        };
+                    })
+                } else {
+                    None
+                };
 
                 let template = quote! {
                     #ty::builder() #(#arguments)* .build(__zinal_context)
@@ -81,8 +88,9 @@ impl Emit for Item<'_> {
 
                 Ok(quote! {
                     {
-                        let template = #template;
-                        __zinal_context.render_template(template)?;
+                        #children_decl
+                        let __zinal_template = #template;
+                        __zinal_context.render_template(__zinal_template)?;
                     }
                 })
             }
