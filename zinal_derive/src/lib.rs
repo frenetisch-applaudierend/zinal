@@ -16,7 +16,7 @@ mod emit;
 mod opts;
 mod parser;
 
-#[proc_macro_derive(Template, attributes(template, optional))]
+#[proc_macro_derive(Template, attributes(template, optional, context))]
 pub fn derive_template(input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
     let input = parse_macro_input!(input as ItemStruct);

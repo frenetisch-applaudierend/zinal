@@ -6,7 +6,13 @@ pub struct TemplateFields(Vec<TemplateField>);
 pub struct TemplateField {
     pub ident: Ident,
     pub ty: Type,
+    pub source: Source,
     pub optionality: Optionality,
+}
+
+pub enum Source {
+    Argument,
+    Context(Type),
 }
 
 pub enum Optionality {
@@ -30,11 +36,13 @@ impl TemplateFields {
         let mut fields = Vec::new();
 
         for field in fields_named.named.iter() {
+            let source = parse_source(field)?;
             let optionality = parse_optionality(field)?;
 
             fields.push(TemplateField {
-                ident: field.ident.clone().expect("Retrieved from FieldsNamed"),
+                ident: field.ident.clone().expect("retrieved from FieldsNamed"),
                 ty: field.ty.clone(),
+                source,
                 optionality,
             });
         }
@@ -77,10 +85,66 @@ impl TemplateFields {
                 None => Ok(Optionality::Required),
             }
         }
+
+        fn parse_source(field: &Field) -> Result<Source, Error> {
+            let mut from_context = false;
+            for attr in field.attrs.iter() {
+                if !attr.path().is_ident("context") {
+                    continue;
+                }
+
+                if from_context {
+                    return Err(Error::new(
+                        attr.span(),
+                        "Only one #[context] attribute is supported per field",
+                    ));
+                }
+
+                if !matches!(attr.meta, Meta::Path(_)) {
+                    return Err(Error::new(
+                        attr.span(),
+                        "#[context] attribute does not support arguments",
+                    ));
+                }
+
+                if !matches!(field.ty, Type::Reference(_)) {
+                    return Err(Error::new(
+                        attr.span(),
+                        "#[context] attribute can only be applied to a reference type",
+                    ));
+                }
+
+                from_context = true;
+            }
+
+            if from_context {
+                let param_ty = match &field.ty {
+                    Type::Reference(inner) => inner,
+                    _ => {
+                        return Err(Error::new(
+                            field.span(),
+                            "#[context] attribute can only be applied to a reference type",
+                        ))
+                    }
+                };
+                Ok(Source::Context(param_ty.elem.as_ref().clone()))
+            } else {
+                Ok(Source::Argument)
+            }
+        }
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &TemplateField> {
         self.0.iter()
+    }
+}
+
+impl Source {
+    pub fn param_ty(&self) -> Option<&Type> {
+        match self {
+            Source::Argument => None,
+            Source::Context(ref ty) => Some(ty),
+        }
     }
 }
 

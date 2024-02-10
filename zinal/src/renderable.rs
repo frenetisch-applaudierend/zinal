@@ -70,12 +70,22 @@ render_unescaped!(u16);
 render_unescaped!(u32);
 render_unescaped!(u64);
 render_unescaped!(u128);
+render_unescaped!(&u8);
+render_unescaped!(&u16);
+render_unescaped!(&u32);
+render_unescaped!(&u64);
+render_unescaped!(&u128);
 
 render_unescaped!(i8);
 render_unescaped!(i16);
 render_unescaped!(i32);
 render_unescaped!(i64);
 render_unescaped!(i128);
+render_unescaped!(&i8);
+render_unescaped!(&i16);
+render_unescaped!(&i32);
+render_unescaped!(&i64);
+render_unescaped!(&i128);
 
 render_deref!(std::boxed::Box<T>);
 render_deref!(std::rc::Rc<T>);

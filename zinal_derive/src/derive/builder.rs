@@ -5,6 +5,8 @@ use syn::{
     GenericParam, Generics, ItemStruct, Type, WhereClause,
 };
 
+use crate::derive::fields::Source;
+
 use super::{
     fields::{TemplateField, TemplateFields},
     properties::TemplateProperties,
@@ -94,6 +96,7 @@ impl<'a> TemplateBuilder<'a> {
         let setters = self
             .template_fields
             .iter()
+            .filter(|f| matches!(f.source, Source::Argument))
             .map(|f| self.generate_setter(f))
             .collect::<Vec<_>>();
 
@@ -136,7 +139,7 @@ impl<'a> TemplateBuilder<'a> {
         let mut predicates = Punctuated::new();
 
         for field in self.template_fields.iter() {
-            if field.optionality.is_optional() {
+            if !matches!(field.source, Source::Argument) || field.optionality.is_optional() {
                 continue;
             }
 
@@ -170,19 +173,35 @@ impl<'a> TemplateBuilder<'a> {
             None
         };
 
-        let fields = self
+        let arg_fields = self
             .template_fields
             .iter()
+            .filter(|f| matches!(f.source, Source::Argument))
             .map(|f| {
                 let field_ident = &f.ident;
-                quote!(#field_ident: self.0.values.#field_ident.expect("Value must be set"))
+                quote!(#field_ident: self.0.values.#field_ident.expect("value must be set"))
+            })
+            .collect::<Vec<_>>();
+
+        let ctx_fields = self
+            .template_fields
+            .iter()
+            .filter(|f| matches!(f.source, Source::Context(_)))
+            .map(|f| {
+                let field_ident = &f.ident;
+                let field_name = f.ident.to_string();
+                let field_ty = &f.source.param_ty().expect("only context sources at this point");
+                
+                quote!(#field_ident: context.get_param::<#field_ty>()
+                    .expect(&format!("missing context parameter {} for field {}", ::std::any::type_name::<#field_ty>(), #field_name)))
             })
             .collect::<Vec<_>>();
 
         quote! {
             pub fn build #build_params (self, context: &mut ::zinal::RenderContext) -> #template_ident #template_generics #where_clause {
                 #template_ident {
-                    #(#fields),*
+                    #(#arg_fields),*
+                    #(#ctx_fields),*
                 }
             }
         }

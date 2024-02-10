@@ -2,8 +2,9 @@ use zinal::{Children, Template};
 
 #[derive(Template)]
 #[template("<div><Person name='Fred'><p>{{self.age}}Lorem ipsum...</p></Person></div>")]
-pub struct Info {
-    age: u8,
+pub struct Info<'a> {
+    #[context]
+    age: &'a u8,
 }
 
 #[derive(Template)]
@@ -16,7 +17,7 @@ struct Person<'a> {
 }
 
 fn main() {
-    match (Info { age: 10 }).render_to_string() {
+    match (Info { age: &10 }).render_to_string() {
         Ok(result) => println!("{}", result),
         Err(err) => eprintln!("{}", err),
     }
