@@ -34,11 +34,13 @@ pub trait Template: Sized {
     /// method call chain:
     ///
     /// ```rust
-    /// # use zinal::Template;
+    /// # use zinal::{Template, RenderContext};
     /// # #[derive(Template)]
     /// # #[template(content = "")]
     /// # struct FooTemplate { name: String, age: u8 }
-    /// FooTemplate::builder().name("John".into()).age(42).build()
+    /// # let mut buf = String::new();
+    /// # let mut context = RenderContext::new(&mut buf);
+    /// FooTemplate::builder().name("John".into()).age(42).build(&mut context)
     /// # ;
     /// ```
     ///

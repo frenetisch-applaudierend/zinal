@@ -270,11 +270,13 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            __zinal_context.render_template(::module::Type::builder()
-                .expr(self.name)
-                .lit("Literal".into())
-                .build(__zinal_context)
-            )?;
+            {
+                let __zinal_template = ::module::Type::builder()
+                    .expr(self.name)
+                    .lit("Literal".into())
+                    .build(__zinal_context);
+                __zinal_context.render_template(__zinal_template)?;
+            }
         };
 
         assert_text(tokens, expected);
