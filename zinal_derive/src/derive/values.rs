@@ -18,7 +18,7 @@ impl<'a> TemplateValues<'a> {
         let values_fields = FieldsNamed {
             brace_token: Default::default(),
             named: fields
-                .iter()
+                .all()
                 .map(|f| {
                     let orig_ty = &f.ty;
 
@@ -60,7 +60,7 @@ impl<'a> TemplateValues<'a> {
 
         let fields = self
             .template_fields
-            .iter()
+            .all()
             .map(|f| {
                 let ident = &f.ident;
                 let value = match &f.optionality {

@@ -1,7 +1,7 @@
-use core::panic;
 use std::{
     any::{Any, TypeId},
     collections::HashMap,
+    rc::Rc,
 };
 
 use crate::{Children, HtmlEscaper, Renderable, Template};
@@ -90,25 +90,30 @@ impl<'a> RenderContext<'a> {
     }
 
     /// Sets a context wide parameter of type T.
-    pub fn set_param<P: Any + Clone>(&mut self, value: P) {
+    pub fn set_param<P: Any>(&mut self, value: P) {
         let type_id = TypeId::of::<P>();
-        let value = Box::new(value);
+        let value = Rc::new(value);
 
         self.params.insert(type_id, value);
     }
 
     /// Returns a context wide parameter of type T if it was set before.
-    pub fn get_param<P: Any + Clone>(&self) -> Option<P> {
+    pub fn get_param<P: Any>(&self) -> Option<Ctx<P>> {
         let type_id = TypeId::of::<P>();
-        let value = self.params.get(&type_id)?;
+        let value = self.params.get(&type_id)?.clone();
 
-        Some(value.downcast_ref().cloned().expect("Should always match"))
+        Some(Ctx(value.downcast().expect("type was checked by TypeId")))
     }
+}
 
-    fn set_params(&mut self, params: TypeMap) {
-        for (key, value) in params {
-            self.params.insert(key, value);
-        }
+/// Wrapper for values provided by the RenderContext.
+pub struct Ctx<T>(Rc<T>);
+
+impl<T> std::ops::Deref for Ctx<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.deref()
     }
 }
 
@@ -138,4 +143,4 @@ impl<'a> From<&'a Children<'a>> for RenderExpression<'a> {
     }
 }
 
-type TypeMap = HashMap<TypeId, Box<dyn Any>>;
+type TypeMap = HashMap<TypeId, Rc<dyn Any>>;

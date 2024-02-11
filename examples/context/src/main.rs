@@ -1,24 +1,37 @@
-use zinal::{Children, Template};
+use zinal::{Children, Ctx, Template};
 
 #[derive(Template)]
-#[template("<div><Person name='Fred'><p>{{self.age}}Lorem ipsum...</p></Person></div>")]
-pub struct Info {
-    #[context]
-    age: u8,
+#[template(content = "<Layout><Content>Hello, World!</Content></Layout>")]
+struct Page {
+    #[provide_context]
+    name: String,
 }
 
 #[derive(Template)]
-#[template("<p>Name: {{self.name}}</p><p>Minor: {{self.minor}}</p>{{self.children}}")]
-struct Person<'a> {
-    name: &'a str,
-    #[optional(default = true)]
-    minor: bool,
+#[template(content = "<main>{{self.children}}</main>")]
+struct Layout<'a> {
+    children: Children<'a>,
+}
+
+#[derive(Template)]
+#[template(content = "
+    <div>{{self.children}}</div>
+    <div>From context: {{self.name}}</div>
+")]
+struct Content<'a> {
+    #[from_context]
+    name: Ctx<String>,
     children: Children<'a>,
 }
 
 fn main() {
-    match (Info { age: 10 }).render_to_string() {
-        Ok(result) => println!("{}", result),
-        Err(err) => eprintln!("{}", err),
-    }
+    let page = Page {
+        name: "Example".to_string(),
+    };
+
+    let rendered = page
+        .render_to_string()
+        .expect("should render without error");
+
+    println!("{}", rendered);
 }

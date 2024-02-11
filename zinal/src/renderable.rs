@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::ops::Deref;
 
-use crate::HtmlEscaper;
+use crate::{Ctx, HtmlEscaper};
 
 /// Implemented by values that can be rendered to a template.
 pub trait Renderable {
@@ -134,5 +134,18 @@ where
             Some(r) => Renderable::render_to(r, writer, escaper),
             None => Ok(()),
         }
+    }
+}
+
+impl<T> Renderable for Ctx<T>
+where
+    T: Renderable,
+{
+    fn render_to(
+        &self,
+        writer: &mut dyn std::fmt::Write,
+        escaper: &HtmlEscaper,
+    ) -> Result<(), std::fmt::Error> {
+        self.deref().render_to(writer, escaper)
     }
 }

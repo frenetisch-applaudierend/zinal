@@ -2,7 +2,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::ToTokens;
 use syn::{ItemStruct, Type};
 
-use super::fields::{Source, TemplateFields};
+use super::fields::TemplateFields;
 
 pub struct TemplateProperties {
     pub mod_ident: Ident,
@@ -13,11 +13,7 @@ impl TemplateProperties {
     pub fn from_template(template: &ItemStruct, fields: &TemplateFields) -> Self {
         Self {
             mod_ident: super::generated_ident(template, "Properties"),
-            properties: fields
-                .iter()
-                .filter(|f| matches!(f.source, Source::Argument))
-                .map(|f| f.ident.clone())
-                .collect(),
+            properties: fields.args().map(|f| f.ident.clone()).collect(),
         }
     }
 

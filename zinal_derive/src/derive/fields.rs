@@ -8,6 +8,7 @@ pub struct TemplateField {
     pub ty: Type,
     pub source: Source,
     pub optionality: Optionality,
+    pub provides_context: bool,
 }
 
 pub enum Source {
@@ -89,21 +90,21 @@ impl TemplateFields {
         fn parse_source(field: &Field) -> Result<Source, Error> {
             let mut from_context = false;
             for attr in field.attrs.iter() {
-                if !attr.path().is_ident("context") {
+                if !attr.path().is_ident("from_context") {
                     continue;
                 }
 
                 if from_context {
                     return Err(Error::new(
                         attr.span(),
-                        "Only one #[context] attribute is supported per field",
+                        "Only one #[from_context] attribute is supported per field",
                     ));
                 }
 
                 if !matches!(attr.meta, Meta::Path(_)) {
                     return Err(Error::new(
                         attr.span(),
-                        "#[context] attribute does not support arguments",
+                        "#[from_context] attribute does not support arguments",
                     ));
                 }
 
@@ -118,8 +119,20 @@ impl TemplateFields {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &TemplateField> {
+    pub fn all(&self) -> impl Iterator<Item = &TemplateField> {
         self.0.iter()
+    }
+
+    pub fn args(&self) -> impl Iterator<Item = &TemplateField> {
+        self.0
+            .iter()
+            .filter(|f| matches!(f.source, Source::Argument))
+    }
+
+    pub fn ctx(&self) -> impl Iterator<Item = &TemplateField> {
+        self.0
+            .iter()
+            .filter(|f| matches!(f.source, Source::Context))
     }
 }
 
