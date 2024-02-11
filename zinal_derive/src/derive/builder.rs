@@ -186,11 +186,11 @@ impl<'a> TemplateBuilder<'a> {
         let ctx_fields = self
             .template_fields
             .iter()
-            .filter(|f| matches!(f.source, Source::Context(_)))
+            .filter(|f| matches!(f.source, Source::Context))
             .map(|f| {
                 let field_ident = &f.ident;
                 let field_name = f.ident.to_string();
-                let field_ty = &f.source.param_ty().expect("only context sources at this point");
+                let field_ty = &f.ty;
                 
                 quote!(#field_ident: context.get_param::<#field_ty>()
                     .expect(&format!("missing context parameter {} for field {}", ::std::any::type_name::<#field_ty>(), #field_name)))

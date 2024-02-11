@@ -12,7 +12,7 @@ pub struct TemplateField {
 
 pub enum Source {
     Argument,
-    Context(Type),
+    Context,
 }
 
 pub enum Optionality {
@@ -107,27 +107,11 @@ impl TemplateFields {
                     ));
                 }
 
-                if !matches!(field.ty, Type::Reference(_)) {
-                    return Err(Error::new(
-                        attr.span(),
-                        "#[context] attribute can only be applied to a reference type",
-                    ));
-                }
-
                 from_context = true;
             }
 
             if from_context {
-                let param_ty = match &field.ty {
-                    Type::Reference(inner) => inner,
-                    _ => {
-                        return Err(Error::new(
-                            field.span(),
-                            "#[context] attribute can only be applied to a reference type",
-                        ))
-                    }
-                };
-                Ok(Source::Context(param_ty.elem.as_ref().clone()))
+                Ok(Source::Context)
             } else {
                 Ok(Source::Argument)
             }
@@ -136,15 +120,6 @@ impl TemplateFields {
 
     pub fn iter(&self) -> impl Iterator<Item = &TemplateField> {
         self.0.iter()
-    }
-}
-
-impl Source {
-    pub fn param_ty(&self) -> Option<&Type> {
-        match self {
-            Source::Argument => None,
-            Source::Context(ref ty) => Some(ty),
-        }
     }
 }
 

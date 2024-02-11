@@ -90,7 +90,7 @@ impl<'a> RenderContext<'a> {
     }
 
     /// Sets a context wide parameter of type T.
-    pub fn set_param<P: Any>(&mut self, value: P) {
+    pub fn set_param<P: Any + Clone>(&mut self, value: P) {
         let type_id = TypeId::of::<P>();
         let value = Box::new(value);
 
@@ -98,11 +98,11 @@ impl<'a> RenderContext<'a> {
     }
 
     /// Returns a context wide parameter of type T if it was set before.
-    pub fn get_param<P: Any>(&self) -> Option<&P> {
+    pub fn get_param<P: Any + Clone>(&self) -> Option<P> {
         let type_id = TypeId::of::<P>();
         let value = self.params.get(&type_id)?;
 
-        Some(value.downcast_ref().expect("Should always match"))
+        Some(value.downcast_ref().cloned().expect("Should always match"))
     }
 
     fn set_params(&mut self, params: TypeMap) {
@@ -135,42 +135,6 @@ where
 impl<'a> From<&'a Children<'a>> for RenderExpression<'a> {
     fn from(value: &'a Children) -> Self {
         Self::Children(value)
-    }
-}
-
-/// A [`Template`] implementation that sets context parameters and then renders a child template.
-pub struct ParamProvider<T> {
-    params: TypeMap,
-    inner: T,
-}
-
-impl<T> ParamProvider<T> {
-    pub(crate) fn new<P: Any>(inner: T, param: P) -> Self {
-        let mut params = TypeMap::new();
-        params.insert(TypeId::of::<P>(), Box::new(param));
-
-        Self { params, inner }
-    }
-}
-
-impl<T> Template for ParamProvider<T>
-where
-    T: Template,
-{
-    type Builder = ();
-
-    fn render(self, context: &mut RenderContext) -> Result<(), std::fmt::Error> {
-        context.set_params(self.params);
-        self.inner.render(context)
-    }
-
-    fn with_context_param<P: Any>(mut self, param: P) -> impl Template {
-        self.params.insert(TypeId::of::<P>(), Box::new(param));
-        self
-    }
-
-    fn builder() -> Self::Builder {
-        panic!("Unsupported");
     }
 }
 

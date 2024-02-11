@@ -1,6 +1,4 @@
-use std::any::Any;
-
-use crate::{ParamProvider, RenderContext};
+use crate::RenderContext;
 
 /// Trait implemented by types representing a template.
 ///
@@ -44,14 +42,15 @@ pub trait Template: Sized {
     /// # ;
     /// ```
     ///
-    /// Therefore, the builder must implement the following requirements:
+    /// As such, the builder must implement the following requirements:
     /// * for each attribute the template should support, there
     ///   needs to be a setter method with the same name, and taking
     ///   a value of the attribute type.
-    /// * a method named build(context: RenderContext) that creates and
+    /// * a method named build(context: &mut RenderContext) that creates and
     ///   returns the template with the previously set properties. The build
     ///   method should require that all required properties were previously
-    ///   set.
+    ///   set. The render context is passed to the build method, so that any
+    ///   context parameters can be set.
     ///
     /// Usually this will be implemented automatically by deriving
     /// the Template trait. When implementing the trait manually,
@@ -82,11 +81,6 @@ pub trait Template: Sized {
         self.render(&mut context)?;
 
         Ok(buf)
-    }
-
-    /// Attach a parameter to the context when rendering this template.
-    fn with_context_param<P: Any>(self, param: P) -> impl Template {
-        ParamProvider::new(self, param)
     }
 
     /// Create and return a builder for this template.
