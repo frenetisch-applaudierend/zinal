@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::ops::Deref;
 
-use crate::{Ctx, HtmlEscaper};
+use crate::HtmlEscaper;
 
 /// Implemented by values that can be rendered to a template.
 pub trait Renderable {
