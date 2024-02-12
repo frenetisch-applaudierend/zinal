@@ -39,12 +39,21 @@ impl TemplateFields {
         for field in fields_named.named.iter() {
             let source = parse_source(field)?;
             let optionality = parse_optionality(field)?;
+            let provides_context = parse_provides_context(field)?;
+
+            if matches!(source, Source::Context) && provides_context {
+                return Err(Error::new(
+                    field.span(),
+                    "Field cannot be both #[from_context] and #[provide_context]",
+                ));
+            }
 
             fields.push(TemplateField {
                 ident: field.ident.clone().expect("retrieved from FieldsNamed"),
                 ty: field.ty.clone(),
                 source,
                 optionality,
+                provides_context,
             });
         }
 
@@ -116,6 +125,33 @@ impl TemplateFields {
             } else {
                 Ok(Source::Argument)
             }
+        }
+
+        fn parse_provides_context(field: &Field) -> Result<bool, Error> {
+            let mut provides_context = false;
+            for attr in field.attrs.iter() {
+                if !attr.path().is_ident("provide_context") {
+                    continue;
+                }
+
+                if provides_context {
+                    return Err(Error::new(
+                        attr.span(),
+                        "Only one #[provide_context] attribute is supported per field",
+                    ));
+                }
+
+                if !matches!(attr.meta, Meta::Path(_)) {
+                    return Err(Error::new(
+                        attr.span(),
+                        "#[provide_context] attribute does not support arguments",
+                    ));
+                }
+
+                provides_context = true;
+            }
+
+            Ok(provides_context)
         }
     }
 

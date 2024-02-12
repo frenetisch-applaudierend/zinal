@@ -90,32 +90,23 @@ impl<'a> RenderContext<'a> {
     }
 
     /// Sets a context wide parameter of type T.
-    pub fn set_param<P: Any>(&mut self, value: P) {
+    pub fn provide_param<P: Any>(&mut self, value: Ctx<P>) {
         let type_id = TypeId::of::<P>();
-        let value = Rc::new(value);
-
         self.params.insert(type_id, value);
     }
 
     /// Returns a context wide parameter of type T if it was set before.
     pub fn get_param<P: Any>(&self) -> Option<Ctx<P>> {
         let type_id = TypeId::of::<P>();
-        let value = self.params.get(&type_id)?.clone();
-
-        Some(Ctx(value.downcast().expect("type was checked by TypeId")))
+        self.params
+            .get(&type_id)
+            .cloned()
+            .map(|p| p.downcast().expect("type was checked by TypeId"))
     }
 }
 
 /// Wrapper for values provided by the RenderContext.
-pub struct Ctx<T>(Rc<T>);
-
-impl<T> std::ops::Deref for Ctx<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        self.0.deref()
-    }
-}
+pub type Ctx<T> = Rc<T>;
 
 /// Types that can be rendered as an expression.
 ///
@@ -143,4 +134,4 @@ impl<'a> From<&'a Children<'a>> for RenderExpression<'a> {
     }
 }
 
-type TypeMap = HashMap<TypeId, Rc<dyn Any>>;
+type TypeMap = HashMap<TypeId, Ctx<dyn Any>>;

@@ -181,10 +181,10 @@ impl<'a> TemplateBuilder<'a> {
 
         for field in self.template_fields.ctx() {
             let field_ident = &field.ident;
-            // let field_name = field_ident.to_string();
+            let field_name = field_ident.to_string();
 
             field_initializers.push(quote!(
-                #field_ident: context.get_param().unwrap()
+                #field_ident: context.get_param().expect(&format!("Missing context parameter {}", #field_name))
             ));
         }
 

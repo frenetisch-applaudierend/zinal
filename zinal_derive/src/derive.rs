@@ -27,7 +27,7 @@ pub(crate) fn derive(template: ItemStruct) -> Result<TokenStream, Error> {
     let values = TemplateValues::from_template(&template, &fields);
     let builder = TemplateBuilder::from_template(&template, &fields, &values, &properties);
 
-    let template_impl = derive_template_impl(&template, &options, &builder)?;
+    let template_impl = derive_template_impl(&template, &fields, &options, &builder)?;
 
     Ok(quote! {
         #template_impl
@@ -39,6 +39,7 @@ pub(crate) fn derive(template: ItemStruct) -> Result<TokenStream, Error> {
 
 fn derive_template_impl(
     template: &ItemStruct,
+    fields: &TemplateFields,
     options: &TemplateOptions,
     builder: &TemplateBuilder<'_>
 ) -> Result<TokenStream, Error> {
@@ -46,6 +47,8 @@ fn derive_template_impl(
 
     let items = parser::parse(&content)?;
     let items = Item::emit_all(items)?;
+
+    let providers  = derive_context_providers(fields);
 
     let ident = &template.ident;
     let (impl_generics, ty_generics, where_clause) = template.generics.split_for_impl();
@@ -62,6 +65,7 @@ fn derive_template_impl(
             type Builder = #builder_ty #builder_args; 
             
             fn render(self, __zinal_context: &mut ::zinal::RenderContext) -> ::std::result::Result<(), ::std::fmt::Error> {
+                #(#providers)*
                 #(#items)*
 
                 Ok(())
@@ -86,6 +90,15 @@ fn derive_template_impl(
 
     // Hand the output tokens back to the compiler
     Ok(expanded)
+}
+
+fn derive_context_providers(fields: &TemplateFields) -> Vec<TokenStream> {
+    fields.args().filter(|f| f.provides_context).map(|f| {
+        let ident = &f.ident;
+        quote!(
+            __zinal_context.provide_param(self.#ident);
+        )
+    }).collect()
 }
 
 pub(crate) fn generated_ident(template: &ItemStruct, name: &str) -> Ident {

@@ -136,16 +136,3 @@ where
         }
     }
 }
-
-impl<T> Renderable for Ctx<T>
-where
-    T: Renderable,
-{
-    fn render_to(
-        &self,
-        writer: &mut dyn std::fmt::Write,
-        escaper: &HtmlEscaper,
-    ) -> Result<(), std::fmt::Error> {
-        self.deref().render_to(writer, escaper)
-    }
-}

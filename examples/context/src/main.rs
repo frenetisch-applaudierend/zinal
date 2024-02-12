@@ -4,7 +4,7 @@ use zinal::{Children, Ctx, Template};
 #[template(content = "<Layout><Content>Hello, World!</Content></Layout>")]
 struct Page {
     #[provide_context]
-    name: String,
+    name: Ctx<String>,
 }
 
 #[derive(Template)]
@@ -26,7 +26,7 @@ struct Content<'a> {
 
 fn main() {
     let page = Page {
-        name: "Example".to_string(),
+        name: Ctx::new("Example".to_string()),
     };
 
     let rendered = page
