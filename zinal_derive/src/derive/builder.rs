@@ -141,7 +141,12 @@ impl<'a> TemplateBuilder<'a> {
             }
 
             let prop_ident = &field.ident;
-            let tail_ident = Ident::new(&format!("Tail_{}", prop_ident), Span::mixed_site());
+            let prop_tail_name = prop_ident.to_string();
+            let mut prop_tail_name = prop_tail_name.as_str();
+            if prop_tail_name.starts_with("r#") {
+                prop_tail_name = &prop_tail_name[2..];
+            }
+            let tail_ident = Ident::new(&format!("Tail_{}", prop_tail_name), Span::mixed_site());
             let prop_ty = self.properties.prop_ty(prop_ident);
 
             args.push(parse_quote!(#tail_ident));
