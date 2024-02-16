@@ -50,6 +50,7 @@ mod renderable;
 mod template;
 
 pub mod builder;
+pub mod html;
 
 pub use children::*;
 pub use context::*;

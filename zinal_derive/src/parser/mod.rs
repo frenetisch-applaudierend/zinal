@@ -52,7 +52,8 @@ pub struct TemplateArgument<'src> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TemplateArgumentValue<'src> {
-    Literal(Cow<'src, str>),
+    StrLiteral(Cow<'src, str>),
+    BoolLiteral(bool),
     Expression(Cow<'src, str>),
 }
 

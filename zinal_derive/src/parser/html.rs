@@ -327,10 +327,10 @@ fn parse_child_template<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
 
         input.consume_while(char::is_whitespace);
         if input.consume_lit("=").is_none() {
-            return Err(syn::Error::new(
-                Span::call_site(),
-                "Unexpected token in template argument",
-            ));
+            return Ok(Some(TemplateArgument {
+                name,
+                value: TemplateArgumentValue::BoolLiteral(true),
+            }));
         }
         input.consume_while(char::is_whitespace);
 
@@ -341,6 +341,14 @@ fn parse_child_template<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
         fn parse_template_argument_value<'src>(
             input: &mut Input<'src>,
         ) -> Result<TemplateArgumentValue<'src>, syn::Error> {
+            if input.consume_lit("true").is_some() {
+                return Ok(TemplateArgumentValue::BoolLiteral(true));
+            }
+
+            if input.consume_lit("false").is_some() {
+                return Ok(TemplateArgumentValue::BoolLiteral(false));
+            }
+
             if let Some(value) = parse_expression_value(input)? {
                 return Ok(value);
             }
@@ -394,7 +402,7 @@ fn parse_child_template<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
                     }
                 }
 
-                Ok(Some(TemplateArgumentValue::Literal(content)))
+                Ok(Some(TemplateArgumentValue::StrLiteral(content)))
             }
 
             fn parse_single_ticks_value<'src>(
@@ -423,7 +431,7 @@ fn parse_child_template<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
                     }
                 }
 
-                Ok(Some(TemplateArgumentValue::Literal(content)))
+                Ok(Some(TemplateArgumentValue::StrLiteral(content)))
             }
         }
     }

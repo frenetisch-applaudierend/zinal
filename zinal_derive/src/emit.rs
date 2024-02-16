@@ -131,7 +131,8 @@ impl Emit for TemplateArgument<'_> {
 impl Emit for TemplateArgumentValue<'_> {
     fn emit(self) -> Result<TokenStream, Error> {
         Ok(match self {
-            TemplateArgumentValue::Literal(v) => quote!(#v.into()),
+            TemplateArgumentValue::StrLiteral(v) => quote!(#v.into()),
+            TemplateArgumentValue::BoolLiteral(v) => quote!(#v.into()),
             TemplateArgumentValue::Expression(expr) => {
                 syn::parse_str::<TokenStream>(expr.as_ref())?
             }
@@ -260,8 +261,16 @@ mod tests {
                     value: TemplateArgumentValue::Expression(Cow::from("self.name")),
                 },
                 TemplateArgument {
-                    name: Cow::from("lit"),
-                    value: TemplateArgumentValue::Literal(Cow::from("Literal")),
+                    name: Cow::from("str_lit"),
+                    value: TemplateArgumentValue::StrLiteral(Cow::from("Literal")),
+                },
+                TemplateArgument {
+                    name: Cow::from("bool_lit_true"),
+                    value: TemplateArgumentValue::BoolLiteral(true),
+                },
+                TemplateArgument {
+                    name: Cow::from("bool_lit_false"),
+                    value: TemplateArgumentValue::BoolLiteral(false),
                 },
             ],
             children: vec![],
@@ -273,7 +282,9 @@ mod tests {
             {
                 let __zinal_template = ::module::Type::builder()
                     .expr(self.name)
-                    .lit("Literal".into())
+                    .str_lit("Literal".into())
+                    .bool_lit_true(true.into())
+                    .bool_lit_false(false.into())
                     .build(__zinal_context);
                 __zinal_context.render_template(__zinal_template)?;
             }

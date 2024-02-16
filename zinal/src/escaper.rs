@@ -9,8 +9,15 @@ impl HtmlEscaper {
     /// If the value is already safe, it is returned unchanged.
     pub fn escape<'a>(&self, value: std::borrow::Cow<'a, str>) -> std::borrow::Cow<'a, str> {
         let mut escaped = String::new();
-        let escapes =
-            ESCAPES.get_or_init(|| HashMap::from([('<', "&lt;"), ('>', "&gt;"), ('&', "&amp;")]));
+        let escapes = ESCAPES.get_or_init(|| {
+            HashMap::from([
+                ('<', "&lt;"),
+                ('>', "&gt;"),
+                ('&', "&amp;"),
+                ('\'', "&apos;"),
+                ('"', "&quot;"),
+            ])
+        });
 
         let mut previous_offset = 0;
         let mut offset = 0;
@@ -58,22 +65,27 @@ mod tests {
 
     #[test]
     fn escaper_escaped() {
-        let input = Cow::from("<&>");
-
-        let output = HtmlEscaper.escape(input);
-
-        assert_eq!(output, Cow::<str>::Owned(String::from("&lt;&amp;&gt;")));
-    }
-
-    #[test]
-    fn escaper_mixed() {
-        let input = Cow::from("< hello & world >");
+        let input = Cow::from("<&'\">");
 
         let output = HtmlEscaper.escape(input);
 
         assert_eq!(
             output,
-            Cow::<str>::Owned(String::from("&lt; hello &amp; world &gt;"))
+            Cow::<str>::Owned(String::from("&lt;&amp;&apos;&quot;&gt;"))
+        );
+    }
+
+    #[test]
+    fn escaper_mixed() {
+        let input = Cow::from("< 'hello' & \"world\" >");
+
+        let output = HtmlEscaper.escape(input);
+
+        assert_eq!(
+            output,
+            Cow::<str>::Owned(String::from(
+                "&lt; &apos;hello&apos; &amp; &quot;world&quot; &gt;"
+            ))
         );
     }
 }

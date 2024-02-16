@@ -267,7 +267,7 @@ fn child_template_with_args() {
     let mut parser = HtmlParser;
 
     let input = Input::new(
-        "<Child expr={{self.name}} lit_double=\"test double\" lit_single='test single' />",
+        "<Child expr={{self.name}} lit_double=\"test double\" lit_single='test single' lit_true=true lit_false=false lit_bool_implied />",
     );
     let result = parser.parse(input).expect("Should have parsed");
 
@@ -282,11 +282,23 @@ fn child_template_with_args() {
                 },
                 TemplateArgument {
                     name: Cow::from("lit_double"),
-                    value: TemplateArgumentValue::Literal(Cow::from("test double"))
+                    value: TemplateArgumentValue::StrLiteral(Cow::from("test double"))
                 },
                 TemplateArgument {
                     name: Cow::from("lit_single"),
-                    value: TemplateArgumentValue::Literal(Cow::from("test single"))
+                    value: TemplateArgumentValue::StrLiteral(Cow::from("test single"))
+                },
+                TemplateArgument {
+                    name: Cow::from("lit_true"),
+                    value: TemplateArgumentValue::BoolLiteral(true)
+                },
+                TemplateArgument {
+                    name: Cow::from("lit_false"),
+                    value: TemplateArgumentValue::BoolLiteral(false)
+                },
+                TemplateArgument {
+                    name: Cow::from("lit_bool_implied"),
+                    value: TemplateArgumentValue::BoolLiteral(true)
                 }
             ],
             children: vec![]
