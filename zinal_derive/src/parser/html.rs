@@ -325,8 +325,10 @@ fn parse_child_template<'src>(input: &mut Input<'src>) -> ParseResult<'src> {
             return Ok(None);
         };
 
+        let pos = input.position();
         input.consume_while(char::is_whitespace);
         if input.consume_lit("=").is_none() {
+            input.reset_to(pos);
             return Ok(Some(TemplateArgument {
                 name,
                 value: TemplateArgumentValue::BoolLiteral(true),
