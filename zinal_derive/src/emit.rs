@@ -119,7 +119,7 @@ impl ToTokens for Keyword {
 
 impl Emit for TemplateArgument<'_> {
     fn emit(self) -> Result<TokenStream, Error> {
-        let name = syn::parse_str::<syn::Ident>(self.name.as_ref())?;
+        let name = syn::parse_str::<syn::Ident>(&format!("r#{}", self.name))?;
         let value = self.value.emit()?;
 
         Ok(quote! {
@@ -281,10 +281,10 @@ mod tests {
         let expected = quote! {
             {
                 let __zinal_template = ::module::Type::builder()
-                    .expr(self.name)
-                    .str_lit("Literal".into())
-                    .bool_lit_true(true.into())
-                    .bool_lit_false(false.into())
+                    .r#expr(self.name)
+                    .r#str_lit("Literal".into())
+                    .r#bool_lit_true(true.into())
+                    .r#bool_lit_false(false.into())
                     .build(__zinal_context);
                 __zinal_context.render_template(__zinal_template)?;
             }
