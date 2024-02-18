@@ -1,13 +1,17 @@
-use crate::RenderContext;
+use crate::{Context, Escaper};
 
 /// Represents child content to a template.
 pub struct Children<'a> {
-    renderer: &'a dyn Fn(&mut RenderContext) -> Result<(), std::fmt::Error>,
+    renderer: &'a RenderFn,
 }
+
+/// Function type to render content.
+pub type RenderFn =
+    dyn Fn(&mut dyn std::fmt::Write, &dyn Escaper, &Context) -> Result<(), std::fmt::Error>;
 
 impl<'a> Children<'a> {
     /// Create a new [`Children`] value with the given renderer.
-    pub fn new<F: Fn(&mut RenderContext) -> Result<(), std::fmt::Error>>(renderer: &'a F) -> Self {
+    pub fn new(renderer: &'a RenderFn) -> Self {
         Self { renderer }
     }
 
@@ -16,7 +20,12 @@ impl<'a> Children<'a> {
     /// # Errors
     ///
     /// This function will return an error if the renderer returns an error.
-    pub fn render(&self, context: &mut RenderContext) -> Result<(), std::fmt::Error> {
-        (self.renderer)(context)
+    pub fn render(
+        &self,
+        writer: &mut dyn std::fmt::Write,
+        escaper: &dyn Escaper,
+        context: &Context,
+    ) -> Result<(), std::fmt::Error> {
+        (self.renderer)(writer, escaper, context)
     }
 }

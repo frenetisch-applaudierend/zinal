@@ -35,6 +35,7 @@ impl<'a> TemplateBuilder<'a> {
             .push(GenericParam::Type(parse_quote!(__zinal_Token)));
 
         let mut args_template = Punctuated::new();
+
         for param in template.generics.params.iter() {
             match param {
                 GenericParam::Lifetime(l) => {
@@ -135,6 +136,12 @@ impl<'a> TemplateBuilder<'a> {
         let mut args = Punctuated::new();
         let mut predicates = Punctuated::new();
 
+        args.push(parse_quote!('__zinal_ctx));
+
+        for lifetime in self.generics.lifetimes() {
+            predicates.push(parse_quote!('__zinal_ctx: #lifetime));
+        }
+
         for field in self.template_fields.args() {
             if field.optionality.is_optional() {
                 continue;
@@ -155,15 +162,11 @@ impl<'a> TemplateBuilder<'a> {
             );
         }
 
-        let build_params = if !args.is_empty() {
-            Some(AngleBracketedGenericArguments {
-                colon2_token: None,
-                lt_token: Default::default(),
-                args,
-                gt_token: Default::default(),
-            })
-        } else {
-            None
+        let build_params = AngleBracketedGenericArguments {
+            colon2_token: None,
+            lt_token: Default::default(),
+            args,
+            gt_token: Default::default(),
         };
 
         let where_clause = if !predicates.is_empty() {
@@ -194,7 +197,7 @@ impl<'a> TemplateBuilder<'a> {
         }
 
         quote! {
-            pub fn build #build_params (self, context: &mut ::zinal::RenderContext) -> #template_ident #template_generics #where_clause {
+            pub fn build #build_params (self, context: &'__zinal_ctx ::zinal::Context) -> #template_ident #template_generics #where_clause {
                 #template_ident {
                     #(#field_initializers),*
                 }

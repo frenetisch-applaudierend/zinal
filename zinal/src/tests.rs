@@ -1,6 +1,6 @@
 use std::{fmt::Error, marker::PhantomData};
 
-use crate::{Children, RenderContext, Renderable, Template};
+use crate::{derive::RenderExpression, Children, Context, Escaper, Template};
 
 struct DummyBuilder<T>(PhantomData<T>);
 
@@ -10,53 +10,29 @@ impl<T> DummyBuilder<T> {
     }
 
     #[allow(dead_code)]
-    fn build(self) -> T {
+    fn build(self, _ctx: &Context) -> T {
         panic!("Unsupported")
     }
 }
 
 #[test]
-fn hello_world() {
-    struct HelloWorld<'a> {
-        name: &'a dyn Renderable,
-    }
-
-    impl Template for HelloWorld<'_> {
-        type Builder = DummyBuilder<Self>;
-
-        fn render(self, context: &mut RenderContext) -> Result<(), std::fmt::Error> {
-            context.render_literal("Hello, ")?;
-            context.render_renderable(self.name)?;
-
-            Ok(())
-        }
-
-        fn builder() -> Self::Builder {
-            DummyBuilder::new()
-        }
-    }
-
-    let name = "World!";
-    let hello = HelloWorld { name: &name };
-
-    assert_eq!(hello.render_to_string(), Ok("Hello, World!".to_string()));
-}
-
-#[test]
+#[allow(clippy::write_literal)]
+#[allow(unused_variables)]
+#[allow(dead_code)]
 fn target_example() {
     // Source:
     //
     // #[derive(Template)]
     // #[template(
     //    type = "html",
-    //    content = "<div><Person name="Fred" age={35}><p>Lorem ipsum...</p></Person></div>"
+    //    content = "<div><Person name="Fred" age={{35}}><p>Lorem ipsum...</p></Person></div>"
     // )]
     // struct Info;
     //
     // #[derive(Template)]
     // #[template(
     //    type = "html",
-    //    content = "<p>Name: {self.name}</p><p>Age: {self.age}</p>{self.children}"
+    //    content = "<p>Name: {{self.name}}</p><p>Age: {{self.age}}</p>{{self.children}}"
     // )]
     // struct Person<'a> {
     //     name: &'a str,
@@ -66,7 +42,9 @@ fn target_example() {
 
     // Should be expanded to:
     //
-    struct Info;
+    struct Info<'a> {
+        dummy: &'a str,
+    }
 
     struct Person<'a> {
         name: &'a str,
@@ -76,23 +54,50 @@ fn target_example() {
 
     // Target derived impls
 
-    impl Template for Info {
-        type Builder = DummyBuilder<Info>;
+    struct PersonBuilder<'a>(PhantomData<Person<'a>>);
 
-        fn render(self, context: &mut RenderContext) -> Result<(), Error> {
-            context.render_literal("<div>")?;
+    impl<'a> PersonBuilder<'a> {
+        fn new() -> Self {
+            Self(PhantomData)
+        }
 
-            context.render_template(Person {
-                name: "Fred",
-                age: 35,
-                children: Children::new(&|c| {
-                    c.render_literal("<p>Lorem ipsum...</p>")?;
-
+        fn build(self, context: &'a Context) -> Person<'a> {
+            Person {
+                name: context.get_param::<String>().as_ref().unwrap(),
+                age: 10,
+                children: Children::new(&|w, e, c| {
+                    write!(w, "{}", "<p>Lorem ipsum...</p>")?;
                     Ok(())
                 }),
-            })?;
+            }
+        }
+    }
 
-            context.render_literal("</div>")?;
+    impl<'a> Template for Info<'a> {
+        type Builder = DummyBuilder<Info<'a>>;
+
+        fn render(
+            self,
+            writer: &mut dyn std::fmt::Write,
+            escaper: &dyn Escaper,
+            context: &Context,
+        ) -> Result<(), Error> {
+            write!(writer, "{}", "<div>")?;
+
+            {
+                let _children = Children::new(&|w, e, c| {
+                    write!(w, "{}", "<p>Lorem ipsum...</p>")?;
+                    Ok(())
+                });
+                let template = Person::builder()
+                    // .name("Fred".into())
+                    // .age(35)
+                    // .children(children)
+                    .build(context);
+                Template::render(template, writer, escaper, context)?;
+            }
+
+            write!(writer, "{}", "</div>")?;
 
             Ok(())
         }
@@ -103,26 +108,32 @@ fn target_example() {
     }
 
     impl<'a> Template for Person<'a> {
-        type Builder = DummyBuilder<Person<'a>>;
+        type Builder = PersonBuilder<'a>;
 
-        fn render(self, context: &mut RenderContext) -> Result<(), Error> {
-            context.render_literal("<p>Name: ")?;
-            context.render_expression(&self.name)?;
-            context.render_literal("</p><p>Age: ")?;
-            context.render_expression(&self.age)?;
-            context.render_literal("</p>")?;
-            context.render_expression(&self.children)?;
+        fn render(
+            self,
+            writer: &mut dyn std::fmt::Write,
+            escaper: &dyn Escaper,
+            context: &Context,
+        ) -> Result<(), Error> {
+            write!(writer, "{}", "<p>Name: ")?;
+            RenderExpression::render(&self.name, writer, escaper, context)?;
+            write!(writer, "{}", "</p><p>Age: ")?;
+            RenderExpression::render(&self.age, writer, escaper, context)?;
+            write!(writer, "{}", "</p>")?;
+            RenderExpression::render(&self.children, writer, escaper, context)?;
 
             Ok(())
         }
 
         fn builder() -> Self::Builder {
-            DummyBuilder::new()
+            PersonBuilder::new()
         }
     }
 
+    let dummy = String::from("dummy");
     assert_eq!(
-        Info.render_to_string(),
+        Info { dummy: &dummy }.render_to_string(),
         Ok("<div><p>Name: Fred</p><p>Age: 35</p><p>Lorem ipsum...</p></div>".to_string())
     );
 }

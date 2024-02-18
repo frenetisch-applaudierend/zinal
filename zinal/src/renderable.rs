@@ -1,16 +1,16 @@
 use std::borrow::Cow;
 use std::ops::Deref;
 
-use crate::HtmlEscaper;
+use crate::Escaper;
 
 /// Implemented by values that can be rendered to a template.
 pub trait Renderable {
     /// Render the value to the writer, escaping it as needed
     /// with the provided escaper.
-    fn render_to(
+    fn render(
         &self,
         writer: &mut dyn std::fmt::Write,
-        escaper: &HtmlEscaper,
+        escaper: &dyn Escaper,
     ) -> Result<(), std::fmt::Error>;
 }
 
@@ -20,10 +20,10 @@ pub trait Renderable {
 // where
 //     T: std::fmt::Display,
 // {
-//     fn render_to(
+//     fn render(
 //         &self,
 //         writer: &mut dyn std::fmt::Write,
-//         escaper: &HtmlEscaper,
+//         escaper: &dyn Escaper,
 //     ) -> Result<(), std::fmt::Error> {
 //         let raw = format!("{}", self);
 //         let escaped = escaper.escape(Cow::Owned(raw));
@@ -35,10 +35,10 @@ pub trait Renderable {
 macro_rules! render_unescaped {
     ($t:ty) => {
         impl Renderable for $t {
-            fn render_to(
+            fn render(
                 &self,
                 writer: &mut dyn std::fmt::Write,
-                _: &HtmlEscaper,
+                _: &dyn Escaper,
             ) -> Result<(), std::fmt::Error> {
                 write!(writer, "{}", self)
             }
@@ -52,12 +52,12 @@ macro_rules! render_deref {
         where
             T: Renderable,
         {
-            fn render_to(
+            fn render(
                 &self,
                 writer: &mut dyn std::fmt::Write,
-                escaper: &HtmlEscaper,
+                escaper: &dyn Escaper,
             ) -> Result<(), std::fmt::Error> {
-                Renderable::render_to(self.deref(), writer, escaper)
+                Renderable::render(self.deref(), writer, escaper)
             }
         }
     };
@@ -92,42 +92,32 @@ render_deref!(std::rc::Rc<T>);
 render_deref!(std::sync::Arc<T>);
 
 impl Renderable for &str {
-    fn render_to(
+    fn render(
         &self,
         writer: &mut dyn std::fmt::Write,
-        escaper: &HtmlEscaper,
+        escaper: &dyn Escaper,
     ) -> Result<(), std::fmt::Error> {
         write!(writer, "{}", escaper.escape(Cow::Borrowed(self)))
     }
 }
 
 impl Renderable for String {
-    fn render_to(
+    fn render(
         &self,
         writer: &mut dyn std::fmt::Write,
-        escaper: &HtmlEscaper,
+        escaper: &dyn Escaper,
     ) -> Result<(), std::fmt::Error> {
         write!(writer, "{}", escaper.escape(Cow::Borrowed(self)))
     }
 }
 
 impl<'a> Renderable for Cow<'a, str> {
-    fn render_to(
+    fn render(
         &self,
         writer: &mut dyn std::fmt::Write,
-        escaper: &HtmlEscaper,
+        escaper: &dyn Escaper,
     ) -> Result<(), std::fmt::Error> {
         write!(writer, "{}", escaper.escape(Cow::Borrowed(self)))
-    }
-}
-
-impl Renderable for &dyn Renderable {
-    fn render_to(
-        &self,
-        writer: &mut dyn std::fmt::Write,
-        escaper: &HtmlEscaper,
-    ) -> Result<(), std::fmt::Error> {
-        Renderable::render_to(*self, writer, escaper)
     }
 }
 
@@ -135,13 +125,13 @@ impl<T> Renderable for Option<T>
 where
     T: Renderable,
 {
-    fn render_to(
+    fn render(
         &self,
         writer: &mut dyn std::fmt::Write,
-        escaper: &HtmlEscaper,
+        escaper: &dyn Escaper,
     ) -> Result<(), std::fmt::Error> {
         match self {
-            Some(r) => Renderable::render_to(r, writer, escaper),
+            Some(r) => Renderable::render(r, writer, escaper),
             None => Ok(()),
         }
     }

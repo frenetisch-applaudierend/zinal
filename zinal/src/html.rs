@@ -1,8 +1,53 @@
 //! Utilities for rendering HTML.
 
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap, sync::OnceLock};
 
-use crate::{HtmlEscaper, Renderable};
+use crate::{Escaper, Renderable};
+
+/// An escaper that escapes strings to be safely included in HTML content.
+pub struct HtmlEscaper;
+
+impl Escaper for HtmlEscaper {
+    /// Escape the given value to be HTML safe.
+    ///
+    /// If the value is already safe, it is returned unchanged.
+    fn escape<'a>(&self, value: Cow<'a, str>) -> Cow<'a, str> {
+        let mut escaped = String::new();
+        let escapes = ESCAPES.get_or_init(|| {
+            HashMap::from([
+                ('<', "&lt;"),
+                ('>', "&gt;"),
+                ('&', "&amp;"),
+                ('\'', "&apos;"),
+                ('"', "&quot;"),
+            ])
+        });
+
+        let mut previous_offset = 0;
+        let mut offset = 0;
+
+        for c in value.chars() {
+            if let Some(replacement) = escapes.get(&c) {
+                escaped.push_str(&value[previous_offset..offset]);
+                escaped.push_str(replacement);
+
+                offset += c.len_utf8();
+                previous_offset = offset;
+            } else {
+                offset += c.len_utf8();
+            }
+        }
+
+        if !escaped.is_empty() {
+            escaped.push_str(&value[previous_offset..offset]);
+            escaped.into()
+        } else {
+            value
+        }
+    }
+}
+
+static ESCAPES: OnceLock<HashMap<char, &'static str>> = OnceLock::new();
 
 /// Render an attribute with the given value.
 ///
@@ -35,10 +80,10 @@ pub struct Attribute<'a, T: AttributeValue> {
 }
 
 impl<'a, T: AttributeValue> Renderable for Attribute<'a, T> {
-    fn render_to(
+    fn render(
         &self,
         writer: &mut dyn std::fmt::Write,
-        escaper: &crate::HtmlEscaper,
+        escaper: &dyn Escaper,
     ) -> Result<(), std::fmt::Error> {
         self.value.render_attribute(self.name, writer, escaper)
     }
@@ -57,7 +102,7 @@ pub trait AttributeValue {
         &self,
         name: &str,
         writer: &mut dyn std::fmt::Write,
-        escaper: &HtmlEscaper,
+        escaper: &dyn Escaper,
     ) -> Result<(), std::fmt::Error>;
 }
 
@@ -66,7 +111,7 @@ impl AttributeValue for &str {
         &self,
         name: &str,
         writer: &mut dyn std::fmt::Write,
-        escaper: &HtmlEscaper,
+        escaper: &dyn Escaper,
     ) -> Result<(), std::fmt::Error> {
         write!(
             writer,
@@ -82,7 +127,7 @@ impl AttributeValue for String {
         &self,
         name: &str,
         writer: &mut dyn std::fmt::Write,
-        escaper: &HtmlEscaper,
+        escaper: &dyn Escaper,
     ) -> Result<(), std::fmt::Error> {
         write!(
             writer,
@@ -98,7 +143,7 @@ impl AttributeValue for bool {
         &self,
         name: &str,
         writer: &mut dyn std::fmt::Write,
-        _escaper: &HtmlEscaper,
+        _escaper: &dyn Escaper,
     ) -> Result<(), std::fmt::Error> {
         if !(*self) {
             return Ok(());
@@ -115,11 +160,58 @@ where
         &self,
         name: &str,
         writer: &mut dyn std::fmt::Write,
-        escaper: &HtmlEscaper,
+        escaper: &dyn Escaper,
     ) -> Result<(), std::fmt::Error> {
         match self {
             Some(value) => value.render_attribute(name, writer, escaper),
             None => Ok(()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::borrow::Cow;
+
+    use crate::Escaper as _;
+
+    use super::HtmlEscaper;
+
+    #[test]
+    fn escaper_unescaped() {
+        let input = Cow::from("This does not need to be escaped");
+
+        let output = HtmlEscaper.escape(input);
+
+        assert_eq!(
+            output,
+            Cow::<str>::Borrowed("This does not need to be escaped")
+        );
+    }
+
+    #[test]
+    fn escaper_escaped() {
+        let input = Cow::from("<&'\">");
+
+        let output = HtmlEscaper.escape(input);
+
+        assert_eq!(
+            output,
+            Cow::<str>::Owned(String::from("&lt;&amp;&apos;&quot;&gt;"))
+        );
+    }
+
+    #[test]
+    fn escaper_mixed() {
+        let input = Cow::from("< 'hello' & \"world\" >");
+
+        let output = HtmlEscaper.escape(input);
+
+        assert_eq!(
+            output,
+            Cow::<str>::Owned(String::from(
+                "&lt; &apos;hello&apos; &amp; &quot;world&quot; &gt;"
+            ))
+        );
     }
 }

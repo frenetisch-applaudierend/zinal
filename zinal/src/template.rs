@@ -1,4 +1,4 @@
-use crate::RenderContext;
+use crate::{html::HtmlEscaper, Context, Escaper};
 
 /// Trait implemented by types representing a template.
 ///
@@ -67,7 +67,12 @@ pub trait Template: Sized {
     ///
     /// This function will return an error if any of the RenderContexts render_* methods fail.
     /// Usually because the underlying std::fmt::Write implementation generates an error.
-    fn render(self, context: &mut RenderContext) -> Result<(), std::fmt::Error>;
+    fn render(
+        self,
+        writer: &mut dyn std::fmt::Write,
+        escaper: &dyn Escaper,
+        context: &Context,
+    ) -> Result<(), std::fmt::Error>;
 
     /// Render this template to a string using the render() method.
     ///
@@ -76,9 +81,10 @@ pub trait Template: Sized {
     /// This function will return an error if the render() method returns an error.
     fn render_to_string(self) -> Result<String, std::fmt::Error> {
         let mut buf = String::new();
-        let mut context = RenderContext::new(&mut buf);
+        let escaper = HtmlEscaper;
+        let context = Context::new();
 
-        self.render(&mut context)?;
+        self.render(&mut buf, &escaper, &context)?;
 
         Ok(buf)
     }

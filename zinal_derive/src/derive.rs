@@ -9,15 +9,15 @@ use crate::{
     parser::{self, Item},
 };
 
-mod values;
-mod properties;
 mod builder;
 mod fields;
+mod properties;
+mod values;
 
-use fields::*;
-use values::*;
-use properties::*;
 use builder::*;
+use fields::*;
+use properties::*;
+use values::*;
 
 pub(crate) fn derive(template: ItemStruct) -> Result<TokenStream, Error> {
     let options = TemplateOptions::from_struct(&template)?;
@@ -41,14 +41,14 @@ fn derive_template_impl(
     template: &ItemStruct,
     fields: &TemplateFields,
     options: &TemplateOptions,
-    builder: &TemplateBuilder<'_>
+    builder: &TemplateBuilder<'_>,
 ) -> Result<TokenStream, Error> {
     let content = read_content(options)?;
 
     let items = parser::parse(&content)?;
     let items = Item::emit_all(items)?;
 
-    let providers  = derive_context_providers(fields);
+    let providers = derive_context_providers(fields);
 
     let ident = &template.ident;
     let (impl_generics, ty_generics, where_clause) = template.generics.split_for_impl();
@@ -62,9 +62,15 @@ fn derive_template_impl(
 
         #[automatically_derived]
         impl #impl_generics ::zinal::Template for #ident #ty_generics #where_clause {
-            type Builder = #builder_ty #builder_args; 
-            
-            fn render(self, __zinal_context: &mut ::zinal::RenderContext) -> ::std::result::Result<(), ::std::fmt::Error> {
+            type Builder = #builder_ty #builder_args;
+
+            fn render(
+                self,
+                __zinal_writer: &mut dyn ::std::fmt::Write,
+                __zinal_escaper: &dyn ::zinal::Escaper,
+                __zinal_context: &::zinal::Context) -> ::std::result::Result<(), ::std::fmt::Error>
+            {
+                let mut __zinal_provided_context = ::zinal::Context::new();
                 #(#providers)*
                 #(#items)*
 
@@ -93,16 +99,23 @@ fn derive_template_impl(
 }
 
 fn derive_context_providers(fields: &TemplateFields) -> Vec<TokenStream> {
-    fields.args().filter(|f| f.provides_context).map(|f| {
-        let ident = &f.ident;
-        quote!(
-            __zinal_context.provide_param(self.#ident);
-        )
-    }).collect()
+    fields
+        .args()
+        .filter(|f| f.provides_context)
+        .map(|f| {
+            let ident = &f.ident;
+            quote!(
+                __zinal_provided_context.provide_param(self.#ident);
+            )
+        })
+        .collect()
 }
 
 pub(crate) fn generated_ident(template: &ItemStruct, name: &str) -> Ident {
-    Ident::new(&format!("__zinal_generated_{}_{}", template.ident, name), template.ident.span())
+    Ident::new(
+        &format!("__zinal_generated_{}_{}", template.ident, name),
+        template.ident.span(),
+    )
 }
 
 fn read_content(options: &TemplateOptions) -> Result<String, Error> {

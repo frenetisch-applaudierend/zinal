@@ -20,13 +20,13 @@ impl Emit for Item<'_> {
     fn emit(self) -> Result<TokenStream, Error> {
         match self {
             Item::Literal(s) => Ok(quote! {
-                __zinal_context.render_literal(#s)?;
+                write!(__zinal_writer, "{}", #s)?;
             }),
 
             Item::Expression(expr) => {
                 let expr = syn::parse_str::<syn::Expr>(expr.as_ref())?;
                 Ok(quote! {
-                    __zinal_context.render_expression(&#expr)?;
+                    ::zinal::derive::RenderExpression::render(&#expr, __zinal_writer, __zinal_escaper, __zinal_context)?;
                 })
             }
 
@@ -73,7 +73,7 @@ impl Emit for Item<'_> {
                 let children_decl = if !children.is_empty() {
                     let children = Item::emit_all(children)?;
                     Some(quote! {
-                        let __zinal_children = |__zinal_context: &mut ::zinal::RenderContext| {
+                        let __zinal_children = |__zinal_writer: &mut dyn ::std::fmt::Write, __zinal_escaper: &dyn ::zinal::Escaper, __zinal_context: &::zinal::Context| {
                             #(#children)*
                             Ok(())
                         };
@@ -90,7 +90,7 @@ impl Emit for Item<'_> {
                     {
                         #children_decl
                         let __zinal_template = #template;
-                        __zinal_context.render_template(__zinal_template)?;
+                        ::zinal::Template::render(__zinal_template, __zinal_writer, __zinal_escaper, __zinal_context)?;
                     }
                 })
             }
@@ -156,7 +156,7 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            __zinal_context.render_literal("Hello, World!")?;
+            write!(__zinal_writer, "{}", "Hello, World!")?;
         };
 
         assert_text(tokens, expected);
