@@ -111,6 +111,16 @@ impl Renderable for String {
     }
 }
 
+impl<'a> Renderable for Cow<'a, str> {
+    fn render_to(
+        &self,
+        writer: &mut dyn std::fmt::Write,
+        escaper: &HtmlEscaper,
+    ) -> Result<(), std::fmt::Error> {
+        write!(writer, "{}", escaper.escape(Cow::Borrowed(self)))
+    }
+}
+
 impl Renderable for &dyn Renderable {
     fn render_to(
         &self,
