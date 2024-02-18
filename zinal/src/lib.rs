@@ -64,6 +64,3 @@ pub use template::*;
 #[cfg(feature = "derive")]
 #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
 pub use zinal_derive::Template;
-
-#[cfg(test)]
-mod tests;

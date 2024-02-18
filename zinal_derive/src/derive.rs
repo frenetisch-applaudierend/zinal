@@ -72,6 +72,8 @@ fn derive_template_impl(
             {
                 let mut __zinal_provided_context = ::zinal::Context::new();
                 #(#providers)*
+                let __zinal_context = &__zinal_context.extend(__zinal_provided_context);
+
                 #(#items)*
 
                 Ok(())

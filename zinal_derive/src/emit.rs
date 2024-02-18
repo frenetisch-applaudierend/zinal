@@ -169,7 +169,7 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            __zinal_context.render_expression(&self.name.to_upper())?;
+            ::zinal::derive::RenderExpression::render(&self.name.to_upper(), __zinal_writer, __zinal_escaper, __zinal_context)?;
         };
 
         assert_text(tokens, expected);
@@ -186,9 +186,9 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            __zinal_context.render_literal("Hello, ")?;
-            __zinal_context.render_expression(&self.name.to_upper())?;
-            __zinal_context.render_literal("!")?;
+            write!(__zinal_writer, "{}", "Hello, ")?;
+            ::zinal::derive::RenderExpression::render(&self.name.to_upper(), __zinal_writer, __zinal_escaper, __zinal_context)?;
+            write!(__zinal_writer, "{}", "!")?;
         };
 
         assert_text(tokens, expected);
@@ -206,7 +206,7 @@ mod tests {
 
         let expected = quote! {
             if self.age > 18 {
-                __zinal_context.render_literal("Hello, World!")?;
+                write!(__zinal_writer, "{}", "Hello, World!")?;
             }
         };
 
@@ -225,7 +225,7 @@ mod tests {
 
         let expected = quote! {
             loop {
-                __zinal_context.render_literal("Hello, World!")?;
+                write!(__zinal_writer, "{}", "Hello, World!")?;
             }
         };
 
@@ -244,7 +244,7 @@ mod tests {
 
         let expected = quote! {
             for name in self.names {
-                __zinal_context.render_literal("Hello, World!")?;
+                write!(__zinal_writer, "{}", "Hello, World!")?;
             }
         };
 
@@ -286,7 +286,7 @@ mod tests {
                     .r#bool_lit_true(true.into())
                     .r#bool_lit_false(false.into())
                     .build(__zinal_context);
-                __zinal_context.render_template(__zinal_template)?;
+                ::zinal::Template::render(__zinal_template, __zinal_writer, __zinal_escaper, __zinal_context)?;
             }
         };
 

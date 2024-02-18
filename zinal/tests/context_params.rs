@@ -17,6 +17,7 @@ pub fn required_params() {
     }
 
     let rendered = render(|| Outer { count: 10 });
+    assert_eq!(rendered, "10");
 }
 
 fn render<T: Template>(builder: impl FnOnce() -> T) -> String {

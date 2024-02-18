@@ -4,14 +4,16 @@ use std::{
 };
 
 /// Context parameters for templates.
-pub struct Context {
+pub struct Context<'a> {
+    parent: Option<&'a Context<'a>>,
     params: TypeMap,
 }
 
-impl Context {
+impl<'a> Context<'a> {
     /// Creates a new [`ContextParams`].
     pub fn new() -> Self {
         Self {
+            parent: None,
             params: TypeMap::new(),
         }
     }
@@ -22,6 +24,7 @@ impl Context {
         self.params
             .get(&type_id)
             .map(|p| p.downcast_ref().expect("type was checked by TypeId"))
+            .or_else(|| self.parent.and_then(|p| p.get_param()))
     }
 
     /// Sets a context wide parameter of type T.
@@ -30,9 +33,17 @@ impl Context {
         let value = Box::new(value);
         self.params.insert(type_id, value);
     }
+
+    /// Extend this context with a child context.
+    pub fn extend(&'a self, context: Context) -> Self {
+        Self {
+            parent: Some(self),
+            params: context.params,
+        }
+    }
 }
 
-impl Default for Context {
+impl Default for Context<'_> {
     fn default() -> Self {
         Self::new()
     }

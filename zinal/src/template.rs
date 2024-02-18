@@ -6,7 +6,7 @@ use crate::{html::HtmlEscaper, Context, Escaper};
 /// template file or string and implement this trait accordingly.
 ///
 /// If you need to implement this trait manually, check the zinal::builder module,
-/// as well as the zinal::RenderContext type for more information.
+/// for more information.
 ///
 /// # Examples
 /// ```rust
@@ -32,13 +32,12 @@ pub trait Template: Sized {
     /// method call chain:
     ///
     /// ```rust
-    /// # use zinal::{Template, RenderContext};
+    /// # use zinal::Template;
     /// # #[derive(Template)]
     /// # #[template(content = "")]
     /// # struct FooTemplate { name: String, age: u8 }
-    /// # let mut buf = String::new();
-    /// # let mut context = RenderContext::new(&mut buf);
-    /// FooTemplate::builder().name("John".into()).age(42).build(&mut context)
+    /// # let mut context = zinal::Context::new();
+    /// FooTemplate::builder().name("John".into()).age(42).build(&context)
     /// # ;
     /// ```
     ///
