@@ -107,7 +107,7 @@ fn derive_context_providers(fields: &TemplateFields) -> Vec<TokenStream> {
         .map(|f| {
             let ident = &f.ident;
             quote!(
-                __zinal_provided_context.provide_param(self.#ident);
+                __zinal_provided_context.provide_param(self.#ident.clone());
             )
         })
         .collect()
