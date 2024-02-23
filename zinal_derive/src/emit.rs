@@ -24,10 +24,17 @@ impl Emit for Item<'_> {
             }),
 
             Item::Expression(expr) => {
-                let expr = syn::parse_str::<syn::Expr>(expr.as_ref())?;
-                Ok(quote! {
-                    ::zinal::derive::RenderExpression::render(&#expr, __zinal_writer, __zinal_escaper, __zinal_context)?;
-                })
+                let expr = expr.as_ref();
+                if expr == "@children" {
+                    Ok(quote! {
+                        ::zinal::Children::render(&__zinal_children, __zinal_writer, __zinal_escaper, __zinal_context)?;
+                    })
+                } else {
+                    let expr = syn::parse_str::<syn::Expr>(expr)?;
+                    Ok(quote! {
+                        ::zinal::Renderable::render(&#expr, __zinal_writer, __zinal_escaper)?;
+                    })
+                }
             }
 
             Item::KeywordStatement {
@@ -58,28 +65,25 @@ impl Emit for Item<'_> {
                 children,
             } => {
                 let ty = syn::parse_str::<syn::TypePath>(name.as_ref())?;
-                let mut arguments = arguments
+                let arguments = arguments
                     .into_iter()
                     .map(Emit::emit)
                     .collect::<Result<Vec<_>, _>>()?;
 
-                if !children.is_empty() {
-                    let tokens = quote! {
-                        .children(::zinal::Children::new(&__zinal_children))
-                    };
-                    arguments.push(tokens);
-                }
-
-                let children_decl = if !children.is_empty() {
+                let children = if !children.is_empty() {
                     let children = Item::emit_all(children)?;
-                    Some(quote! {
-                        let __zinal_children = |__zinal_writer: &mut dyn ::std::fmt::Write, __zinal_escaper: &dyn ::zinal::Escaper, __zinal_context: &::zinal::Context| {
+                    quote! {
+                        |
+                            __zinal_writer: &mut dyn ::std::fmt::Write,
+                            __zinal_escaper: &dyn ::zinal::Escaper,
+                            __zinal_context: &::zinal::Context
+                        | {
                             #(#children)*
                             Ok(())
-                        };
-                    })
+                        }
+                    }
                 } else {
-                    None
+                    quote!(::zinal::EmptyChildren)
                 };
 
                 let template = quote! {
@@ -88,9 +92,14 @@ impl Emit for Item<'_> {
 
                 Ok(quote! {
                     {
-                        #children_decl
                         let __zinal_template = #template;
-                        ::zinal::Template::render(__zinal_template, __zinal_writer, __zinal_escaper, __zinal_context)?;
+
+                        ::zinal::Template::render(
+                            __zinal_template,
+                            __zinal_writer,
+                            __zinal_escaper,
+                            __zinal_context,
+                            #children)?;
                     }
                 })
             }
@@ -169,7 +178,7 @@ mod tests {
         let tokens = Item::emit_all(items);
 
         let expected = quote! {
-            ::zinal::derive::RenderExpression::render(&self.name.to_upper(), __zinal_writer, __zinal_escaper, __zinal_context)?;
+            ::zinal::Renderable::render(&self.name.to_upper(), __zinal_writer, __zinal_escaper)?;
         };
 
         assert_text(tokens, expected);
@@ -187,7 +196,7 @@ mod tests {
 
         let expected = quote! {
             write!(__zinal_writer, "{}", "Hello, ")?;
-            ::zinal::derive::RenderExpression::render(&self.name.to_upper(), __zinal_writer, __zinal_escaper, __zinal_context)?;
+            ::zinal::Renderable::render(&self.name.to_upper(), __zinal_writer, __zinal_escaper)?;
             write!(__zinal_writer, "{}", "!")?;
         };
 
@@ -286,7 +295,7 @@ mod tests {
                     .r#bool_lit_true(true.into())
                     .r#bool_lit_false(false.into())
                     .build(__zinal_context);
-                ::zinal::Template::render(__zinal_template, __zinal_writer, __zinal_escaper, __zinal_context)?;
+                ::zinal::Template::render(__zinal_template, __zinal_writer, __zinal_escaper, __zinal_context, ::zinal::EmptyChildren)?;
             }
         };
 

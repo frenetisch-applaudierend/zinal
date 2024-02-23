@@ -68,8 +68,11 @@ fn derive_template_impl(
                 self,
                 __zinal_writer: &mut dyn ::std::fmt::Write,
                 __zinal_escaper: &dyn ::zinal::Escaper,
-                __zinal_context: &::zinal::Context) -> ::std::result::Result<(), ::std::fmt::Error>
-            {
+                __zinal_context: &::zinal::Context,
+                __zinal_children: impl ::zinal::Children,
+            ) -> ::std::result::Result<(), ::std::fmt::Error> {
+                use ::zinal::derive::*;
+
                 let mut __zinal_provided_context = ::zinal::Context::new();
                 #(#providers)*
                 let __zinal_context = &__zinal_context.extend(__zinal_provided_context);

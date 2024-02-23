@@ -1,41 +1,46 @@
-//! Types used in derived Template impls. You should usually have little to no need to use these types.
+// use crate::{Children, Context, Escaper, Renderable};
 
-use crate::{Children, Context, Escaper, Renderable};
+// #[allow(missing_docs)]
+// pub trait RenderExpressionRenderable {
+//     fn render_expr(
+//         &self,
+//         writer: &mut dyn std::fmt::Write,
+//         escaper: &dyn Escaper,
+//         context: &Context,
+//     ) -> Result<(), std::fmt::Error>;
+// }
 
-/// Trait for items that can be rendered from expressions.
-///
-/// Implemented for [`Renderable`] as blanket impl and for [`Children`].
-pub trait RenderExpression {
-    /// Render this expression to the given writer.
-    fn render(
-        &self,
-        writer: &mut dyn std::fmt::Write,
-        escaper: &dyn Escaper,
-        context: &Context,
-    ) -> Result<(), std::fmt::Error>;
-}
+// #[allow(missing_docs)]
+// pub trait RenderExpressionChildren {
+//     fn render_expr(
+//         self,
+//         writer: &mut dyn std::fmt::Write,
+//         escaper: &dyn Escaper,
+//         context: &Context,
+//     ) -> Result<(), std::fmt::Error>;
+// }
 
-impl<T> RenderExpression for T
-where
-    T: Renderable,
-{
-    fn render(
-        &self,
-        writer: &mut dyn std::fmt::Write,
-        escaper: &dyn Escaper,
-        _context: &Context,
-    ) -> Result<(), std::fmt::Error> {
-        Renderable::render(self, writer, escaper)
-    }
-}
+// impl<T> RenderExpressionRenderable for T
+// where
+//     T: Renderable,
+// {
+//     fn render_expr(
+//         &self,
+//         writer: &mut dyn std::fmt::Write,
+//         escaper: &dyn Escaper,
+//         _context: &Context,
+//     ) -> Result<(), std::fmt::Error> {
+//         Renderable::render(self, writer, escaper)
+//     }
+// }
 
-impl RenderExpression for Children<'_> {
-    fn render(
-        &self,
-        writer: &mut dyn std::fmt::Write,
-        escaper: &dyn Escaper,
-        context: &Context,
-    ) -> Result<(), std::fmt::Error> {
-        Children::render(self, writer, escaper, context)
-    }
-}
+// impl RenderExpressionChildren for Children {
+//     fn render_expr(
+//         self,
+//         writer: &mut dyn std::fmt::Write,
+//         escaper: &dyn Escaper,
+//         context: &Context,
+//     ) -> Result<(), std::fmt::Error> {
+//         Children::render(self, writer, escaper, context)
+//     }
+// }

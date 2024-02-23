@@ -1,4 +1,4 @@
-use crate::{html::HtmlEscaper, Context, Escaper};
+use crate::{html::HtmlEscaper, Children, Context, EmptyChildren, Escaper};
 
 /// Trait implemented by types representing a template.
 ///
@@ -71,6 +71,7 @@ pub trait Template: Sized {
         writer: &mut dyn std::fmt::Write,
         escaper: &dyn Escaper,
         context: &Context,
+        children: impl Children,
     ) -> Result<(), std::fmt::Error>;
 
     /// Render this template to a string using the render() method.
@@ -83,7 +84,7 @@ pub trait Template: Sized {
         let escaper = HtmlEscaper;
         let context = Context::new();
 
-        self.render(&mut buf, &escaper, &context)?;
+        self.render(&mut buf, &escaper, &context, EmptyChildren)?;
 
         Ok(buf)
     }
