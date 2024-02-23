@@ -4,29 +4,26 @@ use zinal::{Children, Ctx, Template};
 #[template(content = "<Layout><Content>Hello, World!</Content></Layout>")]
 struct Page {
     #[provide_context]
-    name: Ctx<String>,
+    name: String,
 }
 
 #[derive(Template)]
-#[template(content = "<main>{{self.children}}</main>")]
-struct Layout<'a> {
-    children: Children<'a>,
-}
+#[template(content = "<main>{{@children}}</main>")]
+struct Layout;
 
 #[derive(Template)]
 #[template(content = "
-    <div>{{self.children}}</div>
+    <div>{{@children}}</div>
     <div>From context: {{self.name}}</div>
 ")]
 struct Content<'a> {
     #[from_context]
-    name: Ctx<String>,
-    children: Children<'a>,
+    name: &'a String,
 }
 
 fn main() {
     let page = Page {
-        name: Ctx::new("Example".to_string()),
+        name: "Example".to_string(),
     };
 
     let rendered = page
