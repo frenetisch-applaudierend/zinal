@@ -52,9 +52,6 @@ mod template;
 pub mod builder;
 pub mod html;
 
-#[cfg(feature = "derive")]
-pub mod derive;
-
 pub use children::*;
 pub use context::*;
 pub use escaper::*;
